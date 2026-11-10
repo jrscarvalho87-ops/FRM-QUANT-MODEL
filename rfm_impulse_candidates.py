@@ -11,6 +11,7 @@ from fibonacci import levels
 from fvg_state import active_fvgs_overlapping_zone
 from structural_liquidity import structural_liquidity
 from volume_profile import approximate_poc
+from htf_context import four_hour_context
 
 
 def generate_impulse_candidates(candles, *, pivot_span=3, expiry_bars=8,
@@ -111,6 +112,7 @@ def generate_impulse_candidates(candles, *, pivot_span=3, expiry_bars=8,
             else:
                 prior_break=any(c<preceding["price"]
                                 for c in closes[opposite["index"]+1:i+1])
+        htf=four_hour_context(bars,i,interval_ms=interval_ms)
         poc_price=None
         poc_in_zone=None
         if "volume_contracts" in bars[i] and times[opposite["index"]]>0:
@@ -142,6 +144,8 @@ def generate_impulse_candidates(candles, *, pivot_span=3, expiry_bars=8,
             "liquidity_previous_day_available":liquidity["previous_day_available"],
             "liquidity_previous_week_available":liquidity["previous_week_available"],
             "structure_break_close_context":prior_break,
+            "htf_4h_premium_discount_proxy":htf["position"],
+            "htf_4h_fraction":htf["fraction"],
             "poc_in_gold_zone_proxy":poc_in_zone,
             "poc_price_approx":poc_price,
             "notes":"Confirmed opposite pivots; no BOS entry gate. Provisional swing selection."
@@ -162,6 +166,7 @@ def generate_impulse_candidates(candles, *, pivot_span=3, expiry_bars=8,
                 "Pivot-pair anchors are mechanical assumptions, not the user's validated RFM.",
                 "FVG in Gold Zone is required; liquidity is measured but relevance threshold is not approved.",
                 "A close past an earlier confirmed pivot is an optional BOS-like feature, not a BOS filter.",
+                "4H premium/discount uses a provisional rolling range of completed 4H candles; informational only.",
                 "An earlier Gold Zone touch is conservatively rejected to avoid retroactive pending orders.",
                 "Only post-confirmation bars are eligible for execution; costs and BE are in execution.py.",
                 "No historical survival, funding, actual exchange fills or independent edge validation."
