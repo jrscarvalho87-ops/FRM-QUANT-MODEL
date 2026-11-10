@@ -96,7 +96,22 @@ footer{margin-top:30px;font-size:12px;color:#7f93af}
 <div class="status" id="replay-status" role="status">Escolhe uma vela anterior ao fim do histórico e um nível de entrada.</div>
 <div class="stats" id="replay-stats"></div>
 </section>
-<footer>RFM Quant v0.10 · Ferramenta de investigação, sem execução de ordens · <a href="/docs">Documentação API</a></footer>
+<section class="panel">
+<h2>5. Backtest automático — hipótese experimental</h2>
+<p class="muted">Este módulo gera candidatos de forma automática usando pivots confirmados, quebra de estrutura e Fibonacci. <b>Não é ainda a reprodução fiel da tua RFM discricionária.</b> O objetivo é testar se esta hipótese mecânica merece continuar a ser investigada.</p>
+<div class="controls">
+<label>Confirmação do pivot<select id="auto-pivot"><option value="2">2 velas</option><option value="3" selected>3 velas</option><option value="5">5 velas</option></select></label>
+<label>Entrada Fib<select id="auto-entry"><option value="67">67%</option><option value="75" selected>75%</option></select></label>
+<label>Filtro FVG<select id="auto-fvg"><option value="false" selected>Opcional (sem filtro)</option><option value="true">Exigir sobreposição</option></select></label>
+<label>Movimento mínimo<select id="auto-swing"><option value="0.003">0,3%</option><option value="0.005" selected>0,5%</option><option value="0.01">1,0%</option></select></label>
+<button id="auto-btn">Executar backtest experimental</button>
+</div>
+<div class="status" id="auto-status" role="status">Carrega o histórico e inicia a investigação.</div>
+<div class="stats" id="auto-stats"></div>
+<div class="readout" id="auto-details"></div>
+<p class="note">As métricas são calculadas dentro da amostra selecionada e não são uma previsão. A escolha de parâmetros depois de observar os resultados introduz overfitting. O motor usa stop-first, comissões e slippage, mas não inclui funding, liquidez real ou validação fora da amostra.</p>
+</section>
+<footer>RFM Quant v0.11 · Ferramenta de investigação, sem execução de ordens · <a href="/docs">Documentação API</a></footer>
 </main>
 <script>
 const $=id=>document.getElementById(id);
@@ -187,7 +202,23 @@ const t=result.trades[0];
 for(const [label,value] of [["Resultado hipotético",sNum(t.pnl)+" USDT"],["R realizado líquido",sNum(t.r_multiple)+"R"],["Entrada simulada",sNum(t.entry_price)],["Saída simulada",sNum(t.exit_price)],["Razão da saída",t.exit_reason],["Equity fictícia final",sNum(summary.ending_equity)+" USDT"],["Abertura de entrada",dateLabel(t.entry_ts)],["Saída",dateLabel(t.exit_ts)]])grid.append(stat(label,value));
 show(status,"Resultado de UM único cenário de âncoras manuais. Não é uma estatística de rentabilidade. Stop-first e custos simulados; não há validação de funding nem de execução real.");}
 catch(e){show(status,"Erro na reprodução: "+e.message,true)}finally{button.disabled=false}}
-$("load").addEventListener("click",load);$("calculate").addEventListener("click",calculate);$("replay-btn").addEventListener("click",replayScenario);
+
+async function runAutomaticResearch(){const status=$("auto-status"),grid=$("auto-stats"),details=$("auto-details"),button=$("auto-btn");
+grid.replaceChildren();details.textContent="";
+if(candleData.length<40){show(status,"Carrega pelo menos 40 velas antes de testar.",true);return}
+button.disabled=true;show(status,"A identificar candidatos em velas fechadas e a simular execuções...");
+try{const payload={candles:candleData,bar:$("bar").value,candidate_settings:{
+pivot_span:Number($("auto-pivot").value),entry_level:Number($("auto-entry").value),
+require_fvg:$("auto-fvg").value==="true",min_swing_fraction:Number($("auto-swing").value),
+expiry_bars:8,max_signals:200},execution_settings:{
+initial_equity:10000,risk_pct:1,fee_bps:5,slippage_bps:2,max_exposure:1,min_rr:2,max_hold_bars:96}};
+const report=await getJson("/api/research/candidate-backtest",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify(payload)});
+const m=report.execution.summary,model=report.candidate_model;
+for(const [k,v] of [["Candidatos gerados",String(model.signal_count)],["Operações fechadas",String(m.closed_trades)],["Win rate",m.win_rate_pct===null?"Sem dados":sNum(m.win_rate_pct)+"%"],["Profit factor",m.profit_factor===null?(m.profit_factor_unbounded?"Sem perdas na amostra":"Sem dados"):sNum(m.profit_factor)],["Expectancy",m.expectancy_r===null?"Sem dados":sNum(m.expectancy_r)+"R"],["Retorno líquido fictício",sNum(m.net_return_pct)+"%"],["Drawdown (equity fechada)",sNum(m.max_closed_trade_drawdown_pct)+"%"],["Capital fictício final",sNum(m.ending_equity)+" USDT"]])grid.append(stat(k,v));
+details.textContent="Sinais ignorados: "+JSON.stringify(m.skipped)+"\nAmostra: "+candleData.length+" velas "+$("bar").value+". Modelo: "+model.hypothesis+".\n"+(model.truncated?"ATENÇÃO: foram truncados sinais; o resultado não representa a amostra completa.\n":"")+"Não é a estratégia RFM validada; POC e alinhamento 4H não são filtros deste modelo.";
+show(status,m.closed_trades?"Backtest exploratório concluído. Interpreta com cautela: amostra única e hipótese ainda não validada.":"O algoritmo não produziu operações fechadas nesta amostra. Não há win rate significativa.");
+}catch(e){show(status,"Falha no backtest: "+e.message,true)}finally{button.disabled=false}}
+$("load").addEventListener("click",load);$("calculate").addEventListener("click",calculate);$("replay-btn").addEventListener("click",replayScenario);$("auto-btn").addEventListener("click",runAutomaticResearch);
 $("asof").addEventListener("change",()=>{if(candleData.length)draw(candleData,null,Number($("asof").value))});
 initContracts().then(load);
 </script></body></html>
