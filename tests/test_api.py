@@ -18,6 +18,10 @@ class AppTests(unittest.TestCase):
         self.assertEqual(response.status_code,200)
         self.assertIn("text/html",response.headers.get("content-type",""))
         self.assertIn("RFM Quant",response.text)
+        self.assertIn("Executar backtest",response.text)
+        self.assertIn("Ordens simuladas",response.text)
+        self.assertIn("Input",response.text)
+        self.assertIn("Modelo",response.text)
 
     def test_poc_lab_is_html(self):
         response=self.client.get("/poc")
