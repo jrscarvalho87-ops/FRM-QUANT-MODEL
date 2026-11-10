@@ -1,13 +1,14 @@
 """Experimental BOS and FVG detector (NOT trading signals).
 
 Pivots become known only after 'span' future candles have fully CLOSED.
-An event's detected_at_ts always marks when it could first be known.
+OKX timestamps mark the OPEN of each candle. known_after_close_ts marks the
+first possible availability of an event at candle close.
 """
 from math import isfinite
 
 
-def scan_structure(candles, pivot_span=3, min_fvg_fraction=0.0005, max_events=200):
-    if not (2 <= pivot_span <= 10 and 0 <= min_fvg_fraction <= 0.1):
+def scan_structure(candles, pivot_span=3, min_fvg_fraction=0.0005, max_events=200, interval_ms=900_000):
+    if not (2 <= pivot_span <= 10 and 0 <= min_fvg_fraction <= 0.1 and interval_ms > 0):
         raise ValueError("invalid detector configuration")
     bars=list(candles)
     if max_events < 1 or max_events > 2000:
@@ -37,33 +38,33 @@ def scan_structure(candles, pivot_span=3, min_fvg_fraction=0.0005, max_events=20
             h=highs[j]
             l=lows[j]
             if all(h > highs[k] for k in range(j-pivot_span,j+pivot_span+1) if k!=j):
-                last_high={"level":h,"pivot_ts":ts[j],"confirmed_at_ts":ts[i]}
+                last_high={"level":h,"pivot_ts":ts[j],"confirmed_at_ts":ts[i], "confirmed_at_close_ts":ts[i] + interval_ms}
                 pivots.append({"kind":"pivot_high",**last_high})
             if all(l < lows[k] for k in range(j-pivot_span,j+pivot_span+1) if k!=j):
-                last_low={"level":l,"pivot_ts":ts[j],"confirmed_at_ts":ts[i]}
+                last_low={"level":l,"pivot_ts":ts[j],"confirmed_at_ts":ts[i], "confirmed_at_close_ts":ts[i] + interval_ms}
                 pivots.append({"kind":"pivot_low",**last_low})
         if i>=1 and last_high and ts[i]>last_high["confirmed_at_ts"]:
             level=last_high["level"]
             if closes[i]>level and closes[i-1]<=level:
-                bos.append({"direction":"bullish","detected_at_ts":ts[i],
+                bos.append({"direction":"bullish","detected_at_ts":ts[i], "known_after_close_ts":ts[i] + interval_ms,
                             "broken_level":level,"swing_pivot_ts":last_high["pivot_ts"],
                             "swing_confirmed_ts":last_high["confirmed_at_ts"]})
         if i>=1 and last_low and ts[i]>last_low["confirmed_at_ts"]:
             level=last_low["level"]
             if closes[i]<level and closes[i-1]>=level:
-                bos.append({"direction":"bearish","detected_at_ts":ts[i],
+                bos.append({"direction":"bearish","detected_at_ts":ts[i], "known_after_close_ts":ts[i] + interval_ms,
                             "broken_level":level,"swing_pivot_ts":last_low["pivot_ts"],
                             "swing_confirmed_ts":last_low["confirmed_at_ts"]})
         if i>=2:
             if lows[i]>highs[i-2]:
                 gap=(lows[i]-highs[i-2])/closes[i]
                 if gap>=min_fvg_fraction:
-                    fvg.append({"direction":"bullish","detected_at_ts":ts[i],
+                    fvg.append({"direction":"bullish","detected_at_ts":ts[i], "known_after_close_ts":ts[i] + interval_ms,
                                 "lower":highs[i-2],"upper":lows[i],"gap_fraction":round(gap,6)})
             if highs[i]<lows[i-2]:
                 gap=(lows[i-2]-highs[i])/closes[i]
                 if gap>=min_fvg_fraction:
-                    fvg.append({"direction":"bearish","detected_at_ts":ts[i],
+                    fvg.append({"direction":"bearish","detected_at_ts":ts[i], "known_after_close_ts":ts[i] + interval_ms,
                                 "lower":highs[i],"upper":lows[i-2],"gap_fraction":round(gap,6)})
     return {"n_bars":n,"pivot_span":pivot_span,
             "bos":bos[-max_events:],"fvg":fvg[-max_events:],
