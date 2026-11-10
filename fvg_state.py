@@ -25,19 +25,25 @@ def active_fvgs_overlapping_zone(candles, asof_index, side, zone_low, zone_high,
     lows=[float(b["low"]) for b in bars]
     if not all(isfinite(x) and x>0 for x in highs+lows):
         raise ValueError("invalid FVG candle")
+    # Linear-time suffix extrema; never inspect a bar after asof_index.
+    suffix_min=[float('inf')]*(len(bars)+1)
+    suffix_max=[float('-inf')]*(len(bars)+1)
+    for k in range(len(bars)-1,-1,-1):
+        suffix_min[k]=min(lows[k],suffix_min[k+1])
+        suffix_max[k]=max(highs[k],suffix_max[k+1])
     result=[]
     for j in range(max(2,start_index),asof_index+1):
         if side=="long":
             lower, upper=highs[j-2],lows[j]
             if upper<=lower:continue
             # A long FVG fills from the upper boundary downwards.
-            active_upper=min(upper,min(lows[j+1:],default=upper))
+            active_upper=min(upper,suffix_min[j+1])
             active_lower=lower
         else:
             lower,upper=highs[j],lows[j-2]
             if upper<=lower:continue
             # A short FVG fills from the lower boundary upwards.
-            active_lower=max(lower,max(highs[j+1:],default=lower))
+            active_lower=max(lower,suffix_max[j+1])
             active_upper=upper
         if active_upper<=active_lower:
             continue
