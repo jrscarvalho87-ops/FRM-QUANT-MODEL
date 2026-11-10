@@ -38,7 +38,6 @@ def fetch_candles(client, base_url, instrument, bar, target, *, last_bar_ts=None
         response = client.get(base + "/api/okx/history", params={
             "inst_id":instrument, "bar":bar, "bars":min(2000,target)})
     else:
-        from history import INTERVAL_MS
         if (not isinstance(last_bar_ts,int) or last_bar_ts<=0 or
                 last_bar_ts%INTERVAL_MS[bar]):
             raise ValueError("last_bar_ts must be a candle-aligned positive integer")
