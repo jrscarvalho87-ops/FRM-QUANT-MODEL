@@ -61,6 +61,19 @@ class SwingLiquidityContextTests(unittest.TestCase):
         self.assertEqual(r["independent_unbreached_contextual_count"],1)
         self.assertEqual(r["independent_unbreached_contextual_types"],1)
 
+    def test_external_levels_above_and_below_are_kept_as_context(self):
+        levels=[
+            self.zone("SSL",100,10,14),  # Fibonacci endpoint (excluded)
+            self.zone("BSL",120,20,24),  # Fibonacci endpoint (excluded)
+            self.zone("BSL",125,4,7),   # independent, above the impulse
+            self.zone("SSL",95,6,9),    # independent, below the impulse
+        ]
+        result=self.check(levels)
+        self.assertEqual(result["independent_unbreached_contextual_count"],0)
+        self.assertEqual(result["independent_unbreached_external_above_count"],1)
+        self.assertEqual(result["independent_unbreached_external_below_count"],1)
+        self.assertEqual(result["independent_unbreached_external_types"],2)
+
     def test_no_threshold_or_filter_is_invented(self):
         r=self.check([])
         self.assertEqual(r["unbreached_contextual_count"],0)
