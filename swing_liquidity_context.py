@@ -28,12 +28,18 @@ def summarize_liquidity_for_swing(zones, *, hundred_price, zero_price,
         in_range=low<=price<=high
         formed_during_impulse=hundred_anchor_ts<=anchor<=zero_anchor_ts
         known_before_impulse=known<=hundred_anchor_ts
+        # The Fibonacci extremes themselves are naturally high/low pivots.
+        # Counting them as "extra liquidity" makes all setups pass by
+        # construction. Keep them in raw counts, exclude them from the
+        # INDEPENDENT structural-liquidity descriptors.
+        is_fibonacci_anchor=anchor in (hundred_anchor_ts,zero_anchor_ts)
         rows.append({
             "type":kind,"price":price,"anchor_ts":anchor,
             "known_after_close_ts":known,
             "in_swing_price_range":in_range,
             "formed_during_impulse":formed_during_impulse,
             "known_before_impulse":known_before_impulse,
+            "is_fibonacci_anchor":is_fibonacci_anchor,
             "unbreached_at_signal":not_breached,
             "bars_since_known":max(0,(cutoff-known)//interval_ms),
         })
@@ -43,6 +49,12 @@ def summarize_liquidity_for_swing(zones, *, hundred_price, zero_price,
     before=[r for r in in_range if r["known_before_impulse"]]
     both=[r for r in in_range if r["unbreached_at_signal"]
           and (r["formed_during_impulse"] or r["known_before_impulse"])]
+    independent=[r for r in in_range if not r["is_fibonacci_anchor"]]
+    independent_unbreached=[
+        r for r in independent if r["unbreached_at_signal"]]
+    independent_contextual=[
+        r for r in independent_unbreached
+        if r["formed_during_impulse"] or r["known_before_impulse"]]
     return {
         "all_known_zone_count":len(rows),
         "in_swing_price_range_count":len(in_range),
@@ -52,7 +64,13 @@ def summarize_liquidity_for_swing(zones, *, hundred_price, zero_price,
         "unbreached_contextual_count":len(both),
         "in_swing_distinct_types":len({r["type"] for r in in_range}),
         "unbreached_contextual_distinct_types":len({r["type"] for r in both}),
+        "independent_in_swing_count":len(independent),
+        "independent_unbreached_count":len(independent_unbreached),
+        "independent_unbreached_contextual_count":len(independent_contextual),
+        "independent_unbreached_contextual_types":len({
+            r["type"] for r in independent_contextual}),
         "observed_zone_types":sorted({r["type"] for r in in_range}),
+        "independent_unbreached_contextual_levels":independent_contextual,
         "unbreached_contextual_levels":both,
-        "warning":"These descriptive features do not establish real available liquidity or an approved entry threshold."
+        "warning":"Fibonacci anchors are excluded from independent structural counts. These descriptive features do not establish real liquidity or an approved entry threshold."
     }
