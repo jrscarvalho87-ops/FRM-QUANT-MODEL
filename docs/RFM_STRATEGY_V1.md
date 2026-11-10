@@ -69,3 +69,12 @@
 
 ## Clarificação adicional da liquidez (2026-11-10)
 O utilizador confirmou que o critério é a presença de **zonas relevantes de liquidez na estrutura do movimento**. Não é obrigatório estarem próximas da Gold Zone nem do take-profit. No modelo, registar localização, tipo, confirmação temporal e contexto estrutural das zonas; não impor restrições de distância sem validação adicional.
+
+## Referência educativa — transcrição de vídeo enviada pelo utilizador (2026-11-10)
+Vídeo YouTube https://youtu.be/QEhVZfh_UBw; transcrição fornecida pelo utilizador. O utilizador afirma que a sua RFM é muito semelhante ao método demonstrado, **não necessariamente idêntica**.
+
+**Regras descritas no vídeo:** execução 15m e contexto 4H; checklist de quatro fatores (HTF premium/discount, BOS, liquidity sweep, imbalance/FVG); exemplo de trade com 3/4 fatores; entrada Fibonacci preferencial a 75% para RR teórico 3:1, alternativa 71% para mais preenchimentos e RR ~2.45:1; stop no extremo de 100%, alvo no extremo de 0%; POC do Volume Profile perto do nível Fibonacci como confluência extra, não requisito obrigatório. O vídeo apresenta apenas exemplos escolhidos de operações vencedoras, não um histórico completo de backtesting.
+
+**Diferenças face à RFM confirmada:** a RFM do utilizador exige FVG na Gold Zone e zonas de liquidez estrutural relevantes (EQH/EQL, BSL/SSL, máximos/mínimos anteriores); não exige sweep, BOS, HTF alinhado ou POC como condições universais. A Gold Zone atual é 67–75%; o nível 71% do vídeo deve ser tratado como variante de pesquisa, não como regra aprovada. O score 25% por fator do vídeo é uma heurística, não probabilidade calibrada nem edge comprovada.
+
+**Investigação futura:** comparar entradas 67/71/75 com custos e fill rate; comparar candidatos com/sem BOS, sweep, alinhamento e POC, sem data snooping; medir amostras completas, não só exemplos vencedores. **Não confundir promessas promocionais do vídeo com evidência estatística.**
