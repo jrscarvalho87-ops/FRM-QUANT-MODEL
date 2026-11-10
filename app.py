@@ -15,6 +15,7 @@ from structure import scan_structure
 from fibonacci import levels as fib_levels
 from volume_profile import approximate_poc
 from rfm_candidates import generate_candidates
+from research_stats import bootstrap_r_multiples
 
 app = FastAPI(title="RFM Quant", version="0.11.0")
 OKX_BASE = "https://www.okx.com"
@@ -268,8 +269,9 @@ async def candidate_backtest(body: dict):
         report=simulate(candles,candidates["signals"],interval_ms=INTERVAL_MS[bar],
                         **execution_settings)
         report["signal_source"]="experimental_confirmed_pivot_hypothesis"
+        bootstrap=bootstrap_r_multiples(report["trades"])
         report["warnings"].append("This is NOT the user's fully specified RFM; it tests a provisional pivot-breakout interpretation.")
-        return {"candidate_model":candidates,"execution":report,
+        return {"candidate_model":candidates,"execution":report,"bootstrap":bootstrap,
                 "warning":"Exploratory in-sample research only. No out-of-sample edge validated."}
     except (ValueError,TypeError,KeyError,OverflowError,ZeroDivisionError) as exc:
         raise HTTPException(status_code=400,detail="Invalid candidate backtest: "+str(exc)) from exc
