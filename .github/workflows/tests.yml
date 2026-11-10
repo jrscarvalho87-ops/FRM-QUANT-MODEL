@@ -12,9 +12,9 @@ jobs:
         with:
           python-version: '3.12'
       - name: Install dependencies
-        run: python -m pip install -r requirements.txt
+        run: python -m pip install -r requirements.txt "numpy>=2,<3" "pandas>=2,<3" "xgboost>=3,<4"
       - name: Compile Python sources
-        run: python -m compileall -q app.py data_quality.py market_audit.py history.py universe.py execution.py structure.py fibonacci.py volume_profile.py rfm_candidates.py research_stats.py tests
+        run: python -m compileall -q app.py data_quality.py market_audit.py history.py universe.py execution.py structure.py fibonacci.py volume_profile.py rfm_candidates.py research_stats.py research tests
       - name: Run data quality and audit tests
         run: python -m unittest discover -s tests -v
       - name: Check browser JavaScript syntax
