@@ -6,10 +6,10 @@
 - Fonte: velas OHLCV confirmadas da API pública OKX, paginadas por RFM Quant, sem credenciais de exchange.
 - Mercados: BTC-USDT-SWAP, ETH-USDT-SWAP e SOL-USDT-SWAP.
 - Amostra: 10 000 velas de 15m por instrumento; 2026-07-29 16:30 UTC a 2026-11-10 20:15 UTC.
-- [Execução completa e ficheiros CSV/JSON](https://github.com/jrscarvalho87-ops/FRM-QUANT-MODEL/actions/runs/42896421388).
+- [Execução completa e ficheiros CSV/JSON](https://github.com/jrscarvalho87-ops/FRM-QUANT-MODEL/actions/runs/42898175611).
 - Regras mecanizadas **provisórias**: pivôs confirmados com janela de 3 velas para âncoras, sinal emitido apenas após confirmação do extremo e sem primeiro toque retroativo na Gold Zone; FVG de três velas ainda ativo na zona. O gerador **impulse_no_bos** não exige BOS.
 - Características de liquidez (EQH/EQL, BSL/SSL, máximos e mínimos de períodos anteriores) foram medidas, **mas a relevância mínima não foi convertida em filtro obrigatório**: por isso o modelo não corresponde integralmente à RFM. Não se adotou nenhuma regra de vídeos.
-- POC OHLCV apenas aproximado e opcional; a anotação do contexto 4H foi acrescentada ao código após esta execução, não afeta os números deste snapshot.
+- POC OHLCV apenas aproximado e opcional; o contexto 4H foi registado apenas como feature informativa baseada em velas 4H completas, sem filtrar entradas.
 - Execução: limite no Fibonacci 75%, validade 8 velas, stop no 100%, take-profit no 0%, risco de referência 1% do capital fictício de 10 000 USDT por mercado, nocional máximo 1x, taxa 5 bps/lado, slippage 2 bps/lado, saída stop-first em barras ambíguas. Sem funding/liquidações/spread variável ou impacto de mercado.
 - BE aos +1R: SL passa à entrada **a partir da vela seguinte** ao gatilho, pela ambiguidade intravela OHLC. BE bruto pode dar resultado líquido negativo.
 
@@ -46,10 +46,10 @@ Foram concatenados os datasets de trades fechados BTC/ETH/SOL, ordenados pelo in
 | Indicador, média dos quatro folds | Brier |
 |---|---:|
 | Previsão constante (baseline) | **0,162347** |
-| XGBoost | 0,182615 |
-| Regressão logística | 0,190612 |
+| XGBoost | 0,182377 |
+| Regressão logística | 0,190323 |
 
-**Nenhum ML superou o baseline.** Não provar edge, nem adicionar um filtro automático de IA. A investigação já analisou a amostra, que deixa de constituir holdout final intacto. As oportunidades e trades dos três ativos são parcialmente correlacionados.
+**Nenhum ML superou o baseline.** Não provar edge, nem adicionar um filtro automático de IA. A investigação já analisou a amostra, que deixa de constituir holdout final intacto. A versão mais recente da experiência, com feature 4H, apresenta as médias de Brier indicadas nesta tabela. As oportunidades e trades dos três ativos são parcialmente correlacionados.
 
 ## Diagnóstico da liquidez e confluências
 
@@ -68,3 +68,8 @@ Por isso, um próximo passo essencial é distinguir níveis estruturais antigos,
 - [Block bootstrap com amostra mínima de 30 trades](https://github.com/jrscarvalho87-ops/FRM-QUANT-MODEL/blob/main/research/robustness.py).
 
 **Portas de validação para um teste fiel:** anotar exemplos reais de âncoras Fibonacci e liquidez estrutural aceite/rejeitada; congelar definição de relevância, mitigação do FVG e validade das ordens; comparar setups com/sem BOS e o BE em períodos novos cronologicamente intactos; verificar custos, funding, spreads e informação temporal; só depois analisar se ML acrescenta vantagem. Não existe aqui qualquer recomendação de operar futures com dinheiro real.
+
+## Atualização de execução / versões (2026-11-10)
+A segunda execução de 10 000 velas por ativo concluiu sem erros, produziu artefactos com dados +1R BE e sem BE e calculou o pooled walk-forward. Os resultados da simulação continuaram iguais ao primeiro snapshot; Brier do XGBoost mudou de 0,182615 para **0,182377** e da regressão logística de 0,190612 para **0,190323** ao incluir contexto 4H. O baseline permaneceu **0,162347** e continuou melhor.
+
+O código posterior à segunda execução acrescentou uma feature de níveis estruturais ainda não ultrapassados. Esta feature **ainda não foi validada num novo snapshot histórico** e não deve ser apresentada como tendo melhorado o desempenho. Esta análise e os dois snapshots são exploratórios, sem validação externa intocada.
