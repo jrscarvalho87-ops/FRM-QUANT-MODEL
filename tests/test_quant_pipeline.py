@@ -33,6 +33,10 @@ class QuantResearchTests(unittest.TestCase):
         result=walk_forward(d,min_train=40,test_size=20,n_splits=3)
         self.assertEqual(result["status"],"evaluated")
         self.assertTrue(all(f["status"]=="evaluated" for f in result["folds"]))
+        self.assertIsNotNone(result["mean_logistic_brier"])
+        self.assertIsNotNone(result["mean_xgboost_brier"])
+        self.assertIsNotNone(result["mean_baseline_brier"])
+        self.assertTrue(all(0<=f["logistic_brier"]<=1 for f in result["folds"]))
 
     def test_insufficient_sample(self):
         d=prepare_dataset(*self.sample(70))
