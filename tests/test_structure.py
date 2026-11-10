@@ -16,6 +16,7 @@ class StructureTests(unittest.TestCase):
         bulls=[b for b in events["bos"] if b["direction"]=="bullish"]
         self.assertEqual(len(bulls),1)
         self.assertEqual(bulls[0]["detected_at_ts"],bars[7]["ts"])
+        self.assertEqual(bulls[0]["known_after_close_ts"],bars[7]["ts"]+900000)
         self.assertEqual(bulls[0]["swing_confirmed_ts"],bars[6]["ts"])
         self.assertEqual(bulls[0]["swing_pivot_ts"],bars[3]["ts"])
 
@@ -24,6 +25,7 @@ class StructureTests(unittest.TestCase):
         events=scan_structure(bars)
         self.assertEqual(len(events["fvg"]),1)
         self.assertEqual(events["fvg"][0]["detected_at_ts"],bars[2]["ts"])
+        self.assertEqual(events["fvg"][0]["known_after_close_ts"],bars[2]["ts"]+900000)
         self.assertEqual(events["fvg"][0]["lower"],100)
         self.assertEqual(events["fvg"][0]["upper"],104)
 
