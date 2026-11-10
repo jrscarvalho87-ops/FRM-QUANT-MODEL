@@ -62,6 +62,21 @@ Isso não constitui uma confluência adicional; é um artefacto da definição. 
 
 A nova métrica continua a ser uma hipótese explicativa — **não** foi convertida num filtro com limiar ou distância obrigatória à Gold Zone/TP. A sua distribuição e utilidade precisam de validação com setups anotados e novas janelas fora da amostra.
 
+### Contagem independente observada no histórico
+Após excluir os extremos 0%/100% da Fibonacci, exigir que o nível estrutural esteja dentro da amplitude de preços do swing e que ainda não tenha sido ultrapassado, a presença de pelo menos um nível **independente** passou a:
+
+| Mercado | Candidatos com nível independente dentro do swing |
+|---|---:|
+| BTC | 8/291 (2,75%) |
+| ETH | 1/301 (0,33%) |
+| SOL | 13/301 (4,32%) |
+| Total | 22/893 (2,46%) |
+
+Os valores vêm de [execução histórica reproduzível](https://github.com/jrscarvalho87-ops/FRM-QUANT-MODEL/actions/runs/42905473234) sobre as mesmas 30 000 velas. **A diferença de 100% para 2,46% demonstra sensibilidade à definição, não um novo filtro rentável.** Um nível relevante pode estar também fora da amplitude do swing.
+
+Por isso, o código passou a registar **níveis independentes e ainda não ultrapassados acima e abaixo do swing**, sem exigir proximidade à Gold Zone ou ao TP. Estas contagens exteriores são apenas features explicativas; não fazem parte de um requisito novo aprovado e a sua utilidade ainda precisa de avaliação.
+
+
 ## Testes e bloqueios restantes
 Testes de longa/curta, consistência de máximos e mínimos, rejeição de futuros, períodos completos, dados com falhas, sincronização de candles e gestão BE estão no [GitHub Actions](https://github.com/jrscarvalho87-ops/FRM-QUANT-MODEL/actions).
 
