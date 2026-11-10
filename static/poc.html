@@ -84,7 +84,19 @@ footer{margin-top:30px;font-size:12px;color:#7f93af}
 </div>
 <p class="note">Limitação: a API fornece velas OHLCV agregadas, não o volume real negociado a cada preço. O POC exibido é uma aproximação que distribui o volume de cada vela uniformemente pelo intervalo mínimo-máximo. A distância “perto do POC” não tem uma tolerância aprovada, por isso só identificamos sobreposição exata com a Gold Zone. Os FVG introduzidos manualmente não são certificados pelo algoritmo.</p>
 </section>
-<footer>RFM Quant v0.9 · Ferramenta de investigação, sem execução de ordens · <a href="/docs">Documentação API</a></footer>
+<section class="panel">
+<h2>4. Replay de um cenário manual (simulação)</h2>
+<p class="muted">Experimenta o que teria acontecido após a <b>última vela analisada</b> que selecionaste acima. O simulador só permite preencher ordens nas velas seguintes. Este replay usa âncoras escolhidas manualmente, portanto <b>pode conter hindsight bias</b> e não demonstra que a RFM é lucrativa.</p>
+<div class="controls">
+<label>Nível de entrada<select id="replay-level"><option value="67">Fib 67%</option><option value="75" selected>Fib 75%</option></select></label>
+<label>Prazo da ordem (velas)<select id="replay-expiry"><option value="4">4</option><option value="8" selected>8</option><option value="16">16</option></select></label>
+<button id="replay-btn">Reproduzir operação hipotética</button>
+</div>
+<div class="note">Pressupostos fixos de investigação: capital fictício de 10.000 USDT, risco pretendido de 1%, exposição máxima de 1x, comissão de 0,05% e slippage de 0,02% por lado. Não inclui funding nem liquidação. Se SL e TP forem atingidos na mesma vela, o stop tem prioridade.</div>
+<div class="status" id="replay-status" role="status">Escolhe uma vela anterior ao fim do histórico e um nível de entrada.</div>
+<div class="stats" id="replay-stats"></div>
+</section>
+<footer>RFM Quant v0.10 · Ferramenta de investigação, sem execução de ordens · <a href="/docs">Documentação API</a></footer>
 </main>
 <script>
 const $=id=>document.getElementById(id);
@@ -154,7 +166,28 @@ const al=$("alignment").value;$("fvg-note").textContent=optionalFvg(goldLo,goldH
 draw(candleData,{zero,hundred,l67,l75,poc:report.poc_price_approx},asof);
 show(status,report.confirmed_bars_used+" velas confirmadas entre "+dateLabel(anchor)+" e "+dateLabel(asof)+". Proxy por distribuição uniforme; sem sinais automáticos.");}
 catch(e){show(status,"Erro no cálculo: "+e.message,true)}finally{button.disabled=false}}
-$("load").addEventListener("click",load);$("calculate").addEventListener("click",calculate);
+
+async function replayScenario(){const status=$("replay-status"),grid=$("replay-stats"),button=$("replay-btn");grid.replaceChildren();
+if(candleData.length<3){show(status,"Carrega histórico suficiente primeiro.",true);return}
+const side=$("side").value,zero=Number($("zero").value),hundred=Number($("hundred").value);
+if(!$("zero").value||!$("hundred").value||!Number.isFinite(zero)||!Number.isFinite(hundred)||zero<=0||hundred<=0){show(status,"Preenche os níveis de Fibonacci antes do replay.",true);return}
+if((side==="long"&&zero<=hundred)||(side==="short"&&zero>=hundred)){show(status,"Orientação da Fib incompatível com a direção.",true);return}
+const signalTs=Number($("asof").value),anchorTs=Number($("anchor").value);
+if(!signalTs||!anchorTs||anchorTs>signalTs||signalTs>=candleData[candleData.length-1].ts){show(status,"Escolhe um instante de decisão anterior ao fim do histórico e posterior ao início da Fib.",true);return}
+const level=Number($("replay-level").value);
+const entry=zero+(level/100)*(hundred-zero);
+const interval={"15m":900000,"1H":3600000,"4H":14400000}[$("bar").value];
+const signal={signal_ts:signalTs,side,entry,stop:hundred,take:zero,expiry_bars:Number($("replay-expiry").value)};
+const settings={initial_equity:10000,risk_pct:1,fee_bps:5,slippage_bps:2,max_exposure:1,min_rr:2,interval_ms:interval,max_hold_bars:96};
+button.disabled=true;show(status,"A reproduzir este cenário, sem gerar sinais adicionais...");
+try{const result=await getJson("/api/research/simulate",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({candles:candleData,signals:[signal],settings})});
+const summary=result.summary;
+if(!result.trades.length){show(status,"Sem operação fechada nesta simulação. Motivo(s): "+JSON.stringify(summary.skipped)+". Não há lucro/perda para reportar.");return}
+const t=result.trades[0];
+for(const [label,value] of [["Resultado hipotético",sNum(t.pnl)+" USDT"],["R realizado líquido",sNum(t.r_multiple)+"R"],["Entrada simulada",sNum(t.entry_price)],["Saída simulada",sNum(t.exit_price)],["Razão da saída",t.exit_reason],["Equity fictícia final",sNum(summary.ending_equity)+" USDT"],["Abertura de entrada",dateLabel(t.entry_ts)],["Saída",dateLabel(t.exit_ts)]])grid.append(stat(label,value));
+show(status,"Resultado de UM único cenário de âncoras manuais. Não é uma estatística de rentabilidade. Stop-first e custos simulados; não há validação de funding nem de execução real.");}
+catch(e){show(status,"Erro na reprodução: "+e.message,true)}finally{button.disabled=false}}
+$("load").addEventListener("click",load);$("calculate").addEventListener("click",calculate);$("replay-btn").addEventListener("click",replayScenario);
 $("asof").addEventListener("change",()=>{if(candleData.length)draw(candleData,null,Number($("asof").value))});
 initContracts().then(load);
 </script></body></html>
