@@ -40,6 +40,27 @@ class SwingLiquidityContextTests(unittest.TestCase):
         with self.assertRaisesRegex(ValueError,"future"):
             self.check([self.zone("EQH",110,10,35)])
 
+    def test_fibonacci_anchor_levels_do_not_count_as_independent_liquidity(self):
+        # Both pivots are inevitably structural high/low levels, and must
+        # not create evidence of extra liquidity by construction.
+        r=self.check([
+            self.zone("SSL",100,10,14),
+            self.zone("BSL",120,20,24),
+        ])
+        self.assertEqual(r["unbreached_contextual_count"],2)
+        self.assertEqual(r["independent_in_swing_count"],0)
+        self.assertEqual(r["independent_unbreached_contextual_count"],0)
+        self.assertEqual(r["independent_unbreached_contextual_types"],0)
+
+    def test_separate_prior_zone_counts_without_proximity_rule(self):
+        r=self.check([
+            self.zone("SSL",100,10,14),
+            self.zone("BSL",120,20,24),
+            self.zone("EQL",101,1,6),
+        ])
+        self.assertEqual(r["independent_unbreached_contextual_count"],1)
+        self.assertEqual(r["independent_unbreached_contextual_types"],1)
+
     def test_no_threshold_or_filter_is_invented(self):
         r=self.check([])
         self.assertEqual(r["unbreached_contextual_count"],0)
