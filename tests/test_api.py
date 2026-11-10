@@ -19,6 +19,25 @@ class AppTests(unittest.TestCase):
         self.assertIn("text/html",response.headers.get("content-type",""))
         self.assertIn("RFM Quant",response.text)
 
+    def test_poc_lab_is_html(self):
+        response=self.client.get("/poc")
+        self.assertEqual(response.status_code,200)
+        self.assertIn("text/html",response.headers.get("content-type",""))
+        self.assertIn("Volume Profile",response.text)
+        self.assertIn("Fibonacci",response.text)
+
+    def test_poc_rejects_unconfirmed_latest_candle(self):
+        bars=[{"ts":900000,"low":"100","high":"110","volume_contracts":"10","confirmed":True},
+              {"ts":1800000,"low":"100","high":"111","volume_contracts":"10","confirmed":False}]
+        response=self.client.post("/api/research/poc",json={
+            "candles":bars,"anchor_ts":900000,"asof_ts":1800000,"bar":"15m"})
+        self.assertEqual(response.status_code,400)
+
+    def test_poc_rejects_invalid_timeframe(self):
+        response=self.client.post("/api/research/poc",json={
+            "candles":[],"anchor_ts":900000,"asof_ts":900000,"bar":"5X"})
+        self.assertEqual(response.status_code,400)
+
     def test_watchlist_has_requested_gram(self):
         result=self.client.get("/api/watchlist").json()
         self.assertEqual(result["count"],31)
