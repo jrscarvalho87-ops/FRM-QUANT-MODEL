@@ -55,6 +55,8 @@ def _load_candles(filename):
     if not values.isin(["true","false","1","0"]).all():
         raise ValueError("invalid confirmed metadata")
     df["confirmed"]=values.isin(["true","1"])
+    if df["ts"].duplicated().any() or not df["ts"].is_monotonic_increasing:
+        raise ValueError("Archived candle timestamps must be unique and increasing")
     candles=df.to_dict(orient="records")
     if not candles or not all(b["confirmed"] is True for b in candles):
         raise ValueError("unconfirmed archival candle")
