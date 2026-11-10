@@ -15,7 +15,7 @@ from structure import scan_structure
 from fibonacci import levels as fib_levels
 from volume_profile import approximate_poc
 
-app = FastAPI(title="RFM Quant", version="0.9.0")
+app = FastAPI(title="RFM Quant", version="0.10.0")
 OKX_BASE = "https://www.okx.com"
 WATCHLIST = ["BTC","ETH","SOL","ZEC","XRP","BNB","RENDER","AVAX","ADA","TAO","NEAR","ONDO","PUMP","CRV","LTC","UNI","SUI","LINK","ENA","AERO","PEPE","DOGE","WIF","GRAM","AAVE","ARB","WLD","VIRTUALS","INJ","DOT","WLFI"]
 BARS = {"1m","3m","5m","15m","30m","1H","2H","4H","6H","12H","1D","1Dutc"}
@@ -44,7 +44,7 @@ async def poc_lab():
 
 @app.get("/health")
 async def health():
-    return {"status":"ok","timestamp_utc":datetime.now(timezone.utc).isoformat()}
+    return {"status":"ok","version":app.version,"timestamp_utc":datetime.now(timezone.utc).isoformat()}
 
 @app.get("/api/watchlist")
 async def watchlist():
