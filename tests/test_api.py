@@ -38,6 +38,28 @@ class AppTests(unittest.TestCase):
         self.assertEqual(response.status_code,200,response.text)
         self.assertEqual(response.json()["summary"]["closed_trades"],1)
 
+
+    def test_poc_endpoint_ignores_future_candle(self):
+        bars=[
+            {"ts":900000,"open":"100","high":"110","low":"100","close":"105","volume_contracts":"100","confirmed":True},
+            {"ts":1800000,"open":"100","high":"110","low":"100","close":"105","volume_contracts":"100","confirmed":True},
+            {"ts":2700000,"open":"140","high":"150","low":"140","close":"145","volume_contracts":"100000","confirmed":True},
+        ]
+        response=self.client.post("/api/research/poc",json={
+            "candles":bars,"anchor_ts":900000,"asof_ts":1800000,
+            "bar":"15m","bins":8,"zero_price":110,"hundred_price":100,"side":"long"})
+        self.assertEqual(response.status_code,200,response.text)
+        report=response.json()
+        self.assertLess(report["poc_price_approx"],110)
+        self.assertEqual(report["future_bars_ignored"],1)
+        self.assertIs(report["is_true_traded_volume_poc"],False)
+
+    def test_poc_endpoint_rejects_bad_anchor(self):
+        bars=[{"ts":900000,"low":"100","high":"110","volume_contracts":"10","confirmed":True}]
+        response=self.client.post("/api/research/poc",json={
+            "candles":bars,"anchor_ts":1800000,"asof_ts":2700000})
+        self.assertEqual(response.status_code,400)
+
     def test_invalid_instrument_rejected_before_api_call(self):
         response=self.client.get("/api/okx/history?inst_id=BTC-FAKE")
         self.assertEqual(response.status_code,400)
