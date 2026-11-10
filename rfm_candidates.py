@@ -74,7 +74,9 @@ def generate_candidates(candles, *, pivot_span=3, expiry_bars=8,
         for side,broken,opposite in candidates:
             # The 0% is the known extreme of the move at signal close,
             # not an unknown future high/low.
-            zero=max(highs[broken["index"]:i+1]) if side=="long" else min(lows[broken["index"]:i+1])
+            zero_idx=(max(range(broken["index"],i+1),key=lambda k:highs[k]) if side=="long"
+                      else min(range(broken["index"],i+1),key=lambda k:lows[k]))
+            zero=highs[zero_idx] if side=="long" else lows[zero_idx]
             hundred=opposite["price"]
             if side=="long" and zero<=hundred or side=="short" and zero>=hundred:
                 continue
@@ -104,7 +106,7 @@ def generate_candidates(candles, *, pivot_span=3, expiry_bars=8,
             events.append({
                 "signal_ts":times[i],"known_after_close_ts":times[i]+interval_ms,
                 "side":side,"anchor_100_ts":opposite["ts"],
-                "anchor_0_ts":times[i],"zero_price":zero,"hundred_price":hundred,
+                "anchor_0_ts":times[zero_idx],"zero_price":zero,"hundred_price":hundred,
                 "entry_level":entry_level,"fvg_overlaps_gold_zone":fvg_overlap,
                 "fvg_count":len(fvg),"broken_pivot_ts":broken["ts"],
                 "notes":"Candidate based on confirmed pivots and breakout, not discretionary RFM."
