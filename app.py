@@ -11,8 +11,9 @@ from market_audit import audit_sample
 from history import fetch_history, INTERVAL_MS
 from universe import catalog_status, screen_window
 from execution import simulate
+from structure import scan_structure
 
-app = FastAPI(title="RFM Quant", version="0.7.0")
+app = FastAPI(title="RFM Quant", version="0.8.0")
 OKX_BASE = "https://www.okx.com"
 WATCHLIST = ["BTC","ETH","SOL","ZEC","XRP","BNB","RENDER","AVAX","ADA","TAO","NEAR","ONDO","PUMP","CRV","LTC","UNI","SUI","LINK","ENA","AERO","PEPE","DOGE","WIF","GRAM","AAVE","ARB","WLD","VIRTUALS","INJ","DOT","WLFI"]
 BARS = {"1m","3m","5m","15m","30m","1H","2H","4H","6H","12H","1D","1Dutc"}
@@ -122,16 +123,17 @@ async def coverage(
     bar: str = Query("4H"),
     bars: int = Query(650, ge=100, le=2000),
     minimum_days: float = Query(90.0, ge=1, le=365),
+    quote: str = Query("USDT", pattern="^(USDT|USDC)$"),
 ):
     symbol = symbol.upper()
     if symbol not in WATCHLIST:
         raise HTTPException(status_code=404, detail="Symbol not in selected universe")
-    inst_id = f"{symbol}-USDT-SWAP"
+    inst_id = f"{symbol}-{quote}-SWAP"
     validate_swap_and_bar(inst_id, bar)
     catalog = await okx_get("/api/v5/public/instruments", {"instType":"SWAP"})
     available = {item["instId"] for item in catalog if item.get("state") == "live"}
     if inst_id not in available:
-        return {"symbol":symbol,"instrument":inst_id,"status":"no_live_usdt_swap",
+        return {"symbol":symbol,"instrument":inst_id,"status":"no_live_selected_swap",
                 "warning":"Public catalog only. No historical coverage was checked."}
     h = await fetch_history(okx_get, inst_id, bar=bar, bars=bars)
     report = screen_window(h, minimum_days=minimum_days)
@@ -169,3 +171,20 @@ async def simulate_supplied_signals(body: dict):
         return simulate(candles, signals, **settings)
     except (ValueError,TypeError,KeyError,OverflowError) as exc:
         raise HTTPException(status_code=400,detail="Invalid simulation inputs: " + str(exc)) from exc
+
+
+@app.get("/api/research/structure")
+async def structure_endpoint(
+    inst_id: str = Query("BTC-USDT-SWAP",min_length=7,max_length=40),
+    bar: str = Query("15m"),
+    bars: int = Query(650,ge=100,le=2000),
+    pivot_span: int = Query(3,ge=2,le=10),
+):
+    """Experimental confirmed BOS/FVG events, never trade recommendations."""
+    validate_swap_and_bar(inst_id,bar)
+    history_data = await fetch_history(okx_get,inst_id,bar=bar,bars=bars)
+    if history_data["missing_intervals"] or history_data["rejected"]["malformed"]:
+        raise HTTPException(status_code=422,detail="Structure requires continuous valid candles")
+    result=scan_structure(history_data["candles"],pivot_span=pivot_span,max_events=30)
+    return {"instrument":inst_id,"bar":bar,"history_coverage_days":history_data["coverage_days"],
+            **result}
