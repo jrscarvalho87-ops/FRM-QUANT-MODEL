@@ -13,7 +13,7 @@ class HistoryTests(unittest.TestCase):
         async def fake(_path,params):
             calls.append(dict(params))
             upper=int(params["after"])//900000-1 if "after" in params else newest
-            indexes=[x for x in range(upper,max(0,upper-int(params["limit"])),-1) if x != gap]
+            indexes=[x for x in range(upper,0,-1) if x != gap][:int(params["limit"])]
             return [candle(x) for x in indexes]
         return asyncio.run(fetch_history(fake,"BTC-USDT-SWAP","15m",requested,page_size)), calls
 
