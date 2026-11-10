@@ -13,8 +13,9 @@ from universe import catalog_status, screen_window
 from execution import simulate
 from structure import scan_structure
 from fibonacci import levels as fib_levels
+from volume_profile import approximate_poc
 
-app = FastAPI(title="RFM Quant", version="0.8.0")
+app = FastAPI(title="RFM Quant", version="0.9.0")
 OKX_BASE = "https://www.okx.com"
 WATCHLIST = ["BTC","ETH","SOL","ZEC","XRP","BNB","RENDER","AVAX","ADA","TAO","NEAR","ONDO","PUMP","CRV","LTC","UNI","SUI","LINK","ENA","AERO","PEPE","DOGE","WIF","GRAM","AAVE","ARB","WLD","VIRTUALS","INJ","DOT","WLFI"]
 BARS = {"1m","3m","5m","15m","30m","1H","2H","4H","6H","12H","1D","1Dutc"}
@@ -202,3 +203,31 @@ async def fibonacci_levels(
         return fib_levels(zero,hundred,side)
     except ValueError as exc:
         raise HTTPException(status_code=400,detail=str(exc)) from exc
+
+
+@app.post("/api/research/poc")
+async def research_poc(body: dict):
+    """OHLCV POC proxy over a dynamic, no-future Fib-anchored time window.
+
+    Caller supplies candles already downloaded from the public API.
+    Does not compute a true traded-volume-by-price profile.
+    """
+    candles = body.get("candles")
+    if not isinstance(candles,list) or len(candles) > 2000:
+        raise HTTPException(status_code=400,detail="Expected at most 2000 candles")
+    if not all(isinstance(row,dict) for row in candles):
+        raise HTTPException(status_code=400,detail="Candles must be objects")
+    bar=body.get("bar","15m")
+    if bar not in INTERVAL_MS:
+        raise HTTPException(status_code=400,detail="Invalid bar")
+    allowed={"candles","bar","anchor_ts","asof_ts","bins","zero_price","hundred_price","side"}
+    if set(body) - allowed:
+        raise HTTPException(status_code=400,detail="Unknown POC field")
+    try:
+        return approximate_poc(
+            candles,body["anchor_ts"],body["asof_ts"],bins=body.get("bins",48),
+            interval_ms=INTERVAL_MS[bar],zero_price=body.get("zero_price"),
+            hundred_price=body.get("hundred_price"),side=body.get("side")
+        )
+    except (ValueError,TypeError,KeyError,OverflowError) as exc:
+        raise HTTPException(status_code=400,detail="Invalid POC inputs: "+str(exc)) from exc
