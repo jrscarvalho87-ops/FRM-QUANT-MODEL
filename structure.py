@@ -1,4 +1,4 @@
-"""Experimental BOS and FVG detector (NOT trading signals).
+"""Experimental BOS, FVG, liquidity sweep and CHoCH-candidate detector.
 
 Pivots become known only after 'span' future candles have fully CLOSED.
 OKX timestamps mark the OPEN of each candle. known_after_close_ts marks the
@@ -15,7 +15,7 @@ def scan_structure(candles, pivot_span=3, min_fvg_fraction=0.0005, max_events=20
         raise ValueError("invalid event limit")
     n=len(bars)
     if not n:
-        return {"n_bars":0,"bos":[],"fvg":[],"pivots":[],"warning":"Experimental analysis, no entry signals."}
+        return {"n_bars":0,"bos":[],"fvg":[],"pivots":[],"sweeps":[],"choch_candidates":[],"counts":{},"warning":"Experimental analysis, no entry signals."}
     ts=[int(c["ts"]) for c in bars]
     if ts!=sorted(set(ts)):
         raise ValueError("unsorted or duplicated timestamps")
@@ -66,11 +66,63 @@ def scan_structure(candles, pivot_span=3, min_fvg_fraction=0.0005, max_events=20
                 if gap>=min_fvg_fraction:
                     fvg.append({"direction":"bearish","detected_at_ts":ts[i], "known_after_close_ts":ts[i] + interval_ms,
                                 "lower":highs[i],"upper":lows[i-2],"gap_fraction":round(gap,6)})
+    # A CHoCH candidate is an opposite-direction confirmed break after a
+    # previously observed BOS. This is a heuristic, not certified market trend.
+    choch_candidates=[]
+    previous_break_direction=None
+    for event in sorted(bos,key=lambda e:e["detected_at_ts"]):
+        if previous_break_direction is not None and event["direction"] != previous_break_direction:
+            choch_candidates.append({**event,"classification":"choch_candidate",
+                                     "previous_break_direction":previous_break_direction})
+        previous_break_direction=event["direction"]
+
+    # Wick through a previously CONFIRMED pivot followed by a close back
+    # inside its level. One sweep maximum per pivot, so the same swing
+    # cannot be inflated into repeated opportunities.
+    sweeps=[]
+    active_high=None
+    active_low=None
+    pivot_events=sorted(pivots,key=lambda p:p["confirmed_at_ts"])
+    pivot_index=0
+    used_high=set()
+    used_low=set()
+    for i,opened_at in enumerate(ts):
+        while pivot_index<len(pivot_events) and pivot_events[pivot_index]["confirmed_at_ts"] < opened_at:
+            pivot=pivot_events[pivot_index]
+            if pivot["kind"]=="pivot_high":
+                active_high=pivot
+            else:
+                active_low=pivot
+            pivot_index+=1
+        if active_high and active_high["pivot_ts"] not in used_high:
+            level=active_high["level"]
+            if highs[i]>level and closes[i]<level:
+                sweeps.append({"kind":"bsl_sweep","direction":"bearish",
+                               "detected_at_ts":opened_at,
+                               "known_after_close_ts":opened_at+interval_ms,
+                               "pivot_ts":active_high["pivot_ts"],
+                               "swept_level":level})
+                used_high.add(active_high["pivot_ts"])
+        if active_low and active_low["pivot_ts"] not in used_low:
+            level=active_low["level"]
+            if lows[i]<level and closes[i]>level:
+                sweeps.append({"kind":"ssl_sweep","direction":"bullish",
+                               "detected_at_ts":opened_at,
+                               "known_after_close_ts":opened_at+interval_ms,
+                               "pivot_ts":active_low["pivot_ts"],
+                               "swept_level":level})
+                used_low.add(active_low["pivot_ts"])
+
     return {"n_bars":n,"pivot_span":pivot_span,
             "bos":bos[-max_events:],"fvg":fvg[-max_events:],
             "pivots":pivots[-max_events:],
+            "sweeps":sweeps[-max_events:],
+            "choch_candidates":choch_candidates[-max_events:],
             "counts":{"bos_bullish":sum(x["direction"]=="bullish" for x in bos),
                       "bos_bearish":sum(x["direction"]=="bearish" for x in bos),
                       "fvg_bullish":sum(x["direction"]=="bullish" for x in fvg),
-                      "fvg_bearish":sum(x["direction"]=="bearish" for x in fvg)},
+                      "fvg_bearish":sum(x["direction"]=="bearish" for x in fvg),
+                      "ssl_sweeps":sum(x["kind"]=="ssl_sweep" for x in sweeps),
+                      "bsl_sweeps":sum(x["kind"]=="bsl_sweep" for x in sweeps),
+                      "choch_candidates":len(choch_candidates)},
             "warning":"Experimental price-action event detection only. No auto-generated RFM trade signals or measured edge."}
