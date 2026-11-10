@@ -71,6 +71,22 @@ class ImpulseCandidateTests(unittest.TestCase):
         self.assertEqual(result["signal_count"],0)
         self.assertGreater(result["rejected"]["gold_zone_already_touched"],0)
 
+    def test_non_extreme_zero_anchor_is_not_a_valid_fibonacci_swing(self):
+        b=sample()
+        # Earlier impulse high exceeds the later locally confirmed high,
+        # but is more than pivot_span candles away. It must not be hidden.
+        b[5]["high"]=121
+        r=generate_impulse_candidates(b[:13],pivot_span=2)
+        self.assertGreater(r["rejected"]["invalid_fibonacci_anchor_extrema"],0)
+        self.assertTrue(all(e["anchor_0_ts"]!=b[10]["ts"] for e in r["events"]))
+
+    def test_reported_candidate_has_geometrically_valid_anchors(self):
+        b=sample()
+        r=generate_impulse_candidates(b,pivot_span=2)
+        self.assertTrue(all(e["swing_anchor_extrema_valid"] for e in r["events"]))
+        self.assertTrue(all(e["swing_duration_bars"]>=1 for e in r["events"]))
+        self.assertTrue(all(e["swing_confirmation_lag_bars"]==2 for e in r["events"]))
+
     def test_time_of_first_execution_is_after_signal(self):
         b=sample()
         r=generate_impulse_candidates(b,pivot_span=2)
