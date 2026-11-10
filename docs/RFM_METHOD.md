@@ -57,3 +57,6 @@ The RFM is discretionary in its current form. The user sometimes trades with jus
 
 ## Volume Profile clarification (2026-11-10)
 The user explicitly confirmed that only **POC** is used, never VAH or VAL. Treat POC as optional context, not a hard entry gate. A historical POC must be computed from data available at signal time; a POC derived from the full future sample would introduce look-ahead bias. Exact price-at-volume POC generally requires volume-at-price information or an explicit approximation method; do not label the highest-volume candle as a true POC.
+
+## POC range rule confirmed (2026-11-10)
+The user uses a manually anchored volume profile beginning at the candle where the Fibonacci is anchored, extending to the current analysis candle. For research, treat this as a dynamically extending fixed-range profile: start at the Fibonacci anchor candle, end at the most recently CLOSED candle as of the signal decision. Never use later candles when calculating historical POC. POC is optional confluence, not a mandatory entry criterion; VAH/VAL are not used. Exact volume-at-price requires granular data or a documented approximation, and binning/price proximity rules are not yet defined. The anchor-selection rule is also not yet fully mechanical.
