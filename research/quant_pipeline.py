@@ -61,6 +61,9 @@ def prepare_dataset(candles:pd.DataFrame,events:pd.DataFrame,trades:pd.DataFrame
 def walk_forward(dataset:pd.DataFrame,*,min_train=80,test_size=25,
                  n_splits=4,embargo_ms=0,seed=42)->dict:
     from xgboost import XGBClassifier
+    from sklearn.linear_model import LogisticRegression
+    from sklearn.pipeline import make_pipeline
+    from sklearn.preprocessing import StandardScaler
     if min_train<30 or test_size<10 or n_splits<1 or embargo_ms<0:
         raise ValueError("invalid evaluation settings")
     d=dataset.sort_values("signal_ts").reset_index(drop=True)
@@ -89,6 +92,11 @@ def walk_forward(dataset:pd.DataFrame,*,min_train=80,test_size=25,
                             random_state=seed,n_jobs=1)
         model.fit(train[feature_columns],train.target_win)
         prob=model.predict_proba(test[feature_columns])[:,1]
+        logistic=make_pipeline(
+            StandardScaler(),
+            LogisticRegression(max_iter=1000,random_state=seed))
+        logistic.fit(train[feature_columns],train.target_win)
+        log_prob=logistic.predict_proba(test[feature_columns])[:,1]
         y=test.target_win.to_numpy()
         selected=prob>=0.5  # predeclared threshold; this is a diagnostic, not a portfolio backtest
         r_values=test.r_multiple.to_numpy(dtype=float)
@@ -97,6 +105,7 @@ def walk_forward(dataset:pd.DataFrame,*,min_train=80,test_size=25,
                       "test_start_ts":int(test.signal_ts.iloc[0]),
                       "test_end_ts":int(test.signal_ts.iloc[-1]),
                       "xgboost_brier":round(float(np.mean((prob-y)**2)),6),
+                      "logistic_brier":round(float(np.mean((log_prob-y)**2)),6),
                       "baseline_brier":round(float(np.mean((baseline-y)**2)),6),
                       "mean_test_r":round(float(test.r_multiple.mean()),5),
                       "selected_by_model":int(selected.sum()),
@@ -108,7 +117,9 @@ def walk_forward(dataset:pd.DataFrame,*,min_train=80,test_size=25,
             "trades":len(d),"features":feature_columns,"folds":folds,
             "mean_xgboost_brier":round(float(np.mean([f["xgboost_brier"] for f in good])),6) if good else None,
             "mean_baseline_brier":round(float(np.mean([f["baseline_brier"] for f in good])),6) if good else None,
+            "mean_logistic_brier":round(float(np.mean([f["logistic_brier"] for f in good])),6) if good else None,
             "warnings":["Only executed closed trades have labels; selection bias remains.",
+                        "Logistic regression is a fixed comparator, not tuned or used for live trading.",
                         "This classifier does not place orders or prove strategy profitability.",
                         "Threshold 0.5 is a fixed exploratory selection diagnostic: overlapping signals and risk sizing are not re-simulated.",
                         "An independent untouched final holdout is still required."]}
