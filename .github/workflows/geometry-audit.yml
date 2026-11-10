@@ -1,0 +1,39 @@
+name: Audit real Fibonacci swings and structural context
+on:
+  push:
+    branches: [main]
+    paths:
+      - research/audit_geometry_snapshot.py
+  workflow_dispatch:
+permissions:
+  contents: read
+  actions: read
+jobs:
+  geometry:
+    runs-on: ubuntu-latest
+    timeout-minutes: 18
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Install research dependencies
+        run: python -m pip install -r requirements.txt "numpy>=2,<3" "pandas>=2,<3" "xgboost>=3,<4" "scikit-learn>=1.5,<2"
+      - name: Retrieve historical 30k-bar snapshot from successful prior workflow
+        uses: actions/download-artifact@v4
+        with:
+          name: rfm-quant-experimental-public-snapshot
+          path: research_outputs/public_sample
+          run-id: 42898175611
+          github-token: \${{ secrets.GITHUB_TOKEN }}
+          repository: jrscarvalho87-ops/FRM-QUANT-MODEL
+      - name: Re-audit geometry and replay BE 1R on archived real prices
+        run: python -m research.audit_geometry_snapshot
+      - name: Upload reproducible audit and re-run outputs
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: rfm-quant-swing-geometry-audit
+          path: research_outputs/geometry_audit/
+          retention-days: 30
+          if-no-files-found: warn
