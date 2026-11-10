@@ -12,7 +12,7 @@ Research-only crypto market data and backtest infrastructure. Developed for obje
 - Find experimental BOS and three-candle FVG structure events on closed candles, without using future price action.
 - Supply explicit closed-candle signals and candles to a conservative research execution simulator with commissions, slippage and risk sizing.
 
-**No RFM auto-trade signals yet.** Fibonacci anchor/stop rules need final confirmation because entry at 75, stop 0 and take 100 yields 0.33:1, not the requested minimum 2:1, when those are points on the same linear scale. See [methodology](docs/RFM_METHOD.md).
+**No RFM auto-trade signals yet.** The user confirmed the Fibonacci orientation with bullish and bearish screenshots: entry 67–75%, protective side at 100%, target side at 0%. Theoretical RR is 2.03:1 at 67% and 3:1 at 75% before fees and stop buffers. See [methodology](docs/RFM_METHOD.md).
 
 ## Run locally
 
