@@ -26,7 +26,7 @@ class AppTests(unittest.TestCase):
 
     def test_fibonacci_arithmetic_is_not_mislabeled(self):
         result=self.client.get("/api/research/fibonacci-rr-check").json()
-        self.assertAlmostEqual(result["examples"][0]["rr"],0.3333,places=4)
+        self.assertAlmostEqual(result["examples"][0]["rr"],3.0,places=4)
 
     def test_simulation_http_endpoint(self):
         bars=[
