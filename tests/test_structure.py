@@ -43,6 +43,37 @@ class StructureTests(unittest.TestCase):
         self.assertEqual(events["pivots"],[])
         self.assertEqual(events["bos"],[])
 
+
+    def test_bsl_sweep_only_after_pivot_was_known(self):
+        highs=[101,102,103,120,115,113,122,123]
+        lows=[90,92,93,94,95,94,95,96]
+        closes=[95,97,100,110,107,105,111,112]
+        bars=[candle(i,highs[i],lows[i],closes[i]) for i in range(len(highs))]
+        report=scan_structure(bars,pivot_span=2)
+        sweeps=[x for x in report["sweeps"] if x["kind"]=="bsl_sweep"]
+        self.assertEqual(len(sweeps),1)
+        self.assertEqual(sweeps[0]["detected_at_ts"],bars[6]["ts"])
+        self.assertEqual(sweeps[0]["known_after_close_ts"],bars[6]["ts"]+900000)
+
+    def test_ssl_sweep_candidate(self):
+        highs=[110,111,112,113,114,115,112]
+        lows=[99,98,96,80,85,88,78]
+        closes=[105,107,109,100,104,108,90]
+        bars=[candle(i,highs[i],lows[i],closes[i]) for i in range(len(highs))]
+        report=scan_structure(bars,pivot_span=2)
+        self.assertEqual(report["counts"]["ssl_sweeps"],1)
+
+    def test_choch_candidate_after_opposite_break(self):
+        highs=[100,102,120,108,106,125,110,108,112,114,111]
+        lows=[90,92,96,94,93,99,95,80,92,94,75]
+        closes=[95,97,110,105,103,122,104,96,102,108,79]
+        bars=[candle(i,highs[i],lows[i],closes[i]) for i in range(len(highs))]
+        report=scan_structure(bars,pivot_span=2)
+        self.assertGreaterEqual(report["counts"]["bos_bullish"],1)
+        self.assertGreaterEqual(report["counts"]["bos_bearish"],1)
+        self.assertEqual(report["counts"]["choch_candidates"],1)
+        self.assertEqual(report["choch_candidates"][0]["direction"],"bearish")
+
     def test_unconfirmed_not_allowed(self):
         b=candle(0,100,90,95)
         b["confirmed"]=False
