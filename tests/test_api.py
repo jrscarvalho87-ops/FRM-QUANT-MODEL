@@ -38,6 +38,28 @@ class AppTests(unittest.TestCase):
             "candles":[],"anchor_ts":900000,"asof_ts":900000,"bar":"5X"})
         self.assertEqual(response.status_code,400)
 
+    def test_automatic_candidate_backtest_empty_sample(self):
+        response=self.client.post("/api/research/candidate-backtest",json={
+            "candles":[],"bar":"15m","candidate_settings":{},
+            "execution_settings":{}})
+        self.assertEqual(response.status_code,200,response.text)
+        data=response.json()
+        self.assertEqual(data["candidate_model"]["signal_count"],0)
+        self.assertEqual(data["execution"]["summary"]["closed_trades"],0)
+        self.assertEqual(data["bootstrap"]["status"],"insufficient_sample")
+
+    def test_automatic_candidate_backtest_rejects_unconfirmed(self):
+        bars=[{"ts":900000,"open":"100","high":"101","low":"99",
+               "close":"100","confirmed":False}]
+        response=self.client.post("/api/research/candidate-backtest",json={
+            "candles":bars,"bar":"15m"})
+        self.assertEqual(response.status_code,400)
+
+    def test_automatic_candidate_backtest_rejects_unapproved_setting(self):
+        response=self.client.post("/api/research/candidate-backtest",json={
+            "candles":[],"candidate_settings":{"secret_leverage":100}})
+        self.assertEqual(response.status_code,400)
+
     def test_watchlist_has_requested_gram(self):
         result=self.client.get("/api/watchlist").json()
         self.assertEqual(result["count"],31)
