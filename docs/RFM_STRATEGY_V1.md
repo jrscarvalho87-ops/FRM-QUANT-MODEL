@@ -19,6 +19,7 @@
 | Gold Zone | Retração 67–75% | Confirmado |
 | SL | Na região do 100% | Confirmado, buffer exato pendente |
 | TP | Na região do 0% | Confirmado, buffer exato pendente |
+| Proteção de break-even | **Quando o preço atinge +1R a favor da posição, mover o SL para o preço de entrada (BE)** | Confirmado pelo utilizador; BE bruto não cobre necessariamente comissões/slippage |
 | FVG / imbalance | **Essencial: FVG deve sobrepor a Gold Zone 67–75%** | Confirmado |
 | BOS ou CHoCH | Informação estrutural; CHoCH pode substituir BOS | Confirmado como contexto opcional |
 | Liquidity sweep | Confluência opcional | Confirmado |
@@ -70,3 +71,6 @@
 ## Clarificação adicional da liquidez (2026-11-10)
 O utilizador confirmou que o critério é a presença de **zonas relevantes de liquidez na estrutura do movimento**. Não é obrigatório estarem próximas da Gold Zone nem do take-profit. No modelo, registar localização, tipo, confirmação temporal e contexto estrutural das zonas; não impor restrições de distância sem validação adicional.
 
+
+## Gestão da posição — regra confirmada (2026-11-10)
+Quando a operação atinge **+1R de movimento favorável**, medido desde o preço de entrada até ao stop inicial, o **stop-loss é movido para break-even (preço de entrada)**. A posição mantém o take-profit original, a menos que outra regra venha a ser confirmada. Se o preço regressar à entrada depois da ativação, a saída é BE **bruto**; o resultado líquido pode ser ligeiramente negativo por taxas e slippage. Em backtests OHLCV, a ordem intravela entre atingir +1R e regressar ao stop é desconhecida; usar política conservadora e reportar essa limitação, sem fabricar sequência intravela.
