@@ -13,15 +13,15 @@ def candles(highs,lows,closes=None):
 
 class CandidateTests(unittest.TestCase):
     def bullish(self):
-        highs=[100,102,105,108,104,101,103,107,109,111,112]
-        lows=[90,91,92,94,90,80,88,91,94,96,98]
-        closes=[95,97,99,100,97,90,95,100,107,110,109]
+        highs=[100,102,103,105,110,120,115,111,116,124,125]
+        lows=[95,94,93,80,89,95,96,97,98,100,102]
+        closes=[97,99,100,96,103,110,109,107,116,122,121]
         return candles(highs,lows,closes)
 
     def bearish(self):
-        highs=[110,109,108,106,110,120,112,109,106,104,102]
-        lows=[100,98,95,92,96,99,97,93,91,89,88]
-        closes=[105,103,101,100,105,110,106,100,94,90,91]
+        highs=[105,108,110,120,114,109,107,106,105,104,102]
+        lows=[99,98,97,96,90,80,85,89,86,75,74]
+        closes=[102,104,105,111,106,95,97,99,90,78,79]
         return candles(highs,lows,closes)
 
     def test_bullish_breakout_known_only_after_close(self):
