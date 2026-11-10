@@ -14,8 +14,9 @@ from execution import simulate
 from structure import scan_structure
 from fibonacci import levels as fib_levels
 from volume_profile import approximate_poc
+from rfm_candidates import generate_candidates
 
-app = FastAPI(title="RFM Quant", version="0.10.0")
+app = FastAPI(title="RFM Quant", version="0.11.0")
 OKX_BASE = "https://www.okx.com"
 WATCHLIST = ["BTC","ETH","SOL","ZEC","XRP","BNB","RENDER","AVAX","ADA","TAO","NEAR","ONDO","PUMP","CRV","LTC","UNI","SUI","LINK","ENA","AERO","PEPE","DOGE","WIF","GRAM","AAVE","ARB","WLD","VIRTUALS","INJ","DOT","WLFI"]
 BARS = {"1m","3m","5m","15m","30m","1H","2H","4H","6H","12H","1D","1Dutc"}
@@ -237,3 +238,38 @@ async def research_poc(body: dict):
         )
     except (ValueError,TypeError,KeyError,OverflowError) as exc:
         raise HTTPException(status_code=400,detail="Invalid POC inputs: "+str(exc)) from exc
+
+
+@app.post("/api/research/candidate-backtest")
+async def candidate_backtest(body: dict):
+    """Experimental pivot-breakout hypothesis, never user-approved RFM signals.
+
+    Accepts only user-supplied confirmed OHLCV candles, no exchange orders.
+    """
+    candles=body.get("candles")
+    settings=body.get("candidate_settings",{})
+    execution_settings=body.get("execution_settings",{})
+    if not isinstance(candles,list) or len(candles)>2000 or not all(isinstance(c,dict) for c in candles):
+        raise HTTPException(status_code=400,detail="Expected up to 2000 candle objects")
+    if not isinstance(settings,dict) or not isinstance(execution_settings,dict):
+        raise HTTPException(status_code=400,detail="Expected candidate_settings and execution_settings objects")
+    allowed={"pivot_span","expiry_bars","entry_level","require_fvg","min_swing_fraction","max_signals"}
+    execution_allowed={"initial_equity","risk_pct","fee_bps","slippage_bps",
+                       "max_exposure","min_rr","max_hold_bars"}
+    if set(settings)-allowed or set(execution_settings)-execution_allowed:
+        raise HTTPException(status_code=400,detail="Unsupported backtest setting")
+    bar=body.get("bar","15m")
+    if bar not in INTERVAL_MS:
+        raise HTTPException(status_code=400,detail="Unsupported timeframe")
+    if set(body)-{"candles","candidate_settings","execution_settings","bar"}:
+        raise HTTPException(status_code=400,detail="Unsupported backtest field")
+    try:
+        candidates=generate_candidates(candles,interval_ms=INTERVAL_MS[bar],**settings)
+        report=simulate(candles,candidates["signals"],interval_ms=INTERVAL_MS[bar],
+                        **execution_settings)
+        report["signal_source"]="experimental_confirmed_pivot_hypothesis"
+        report["warnings"].append("This is NOT the user's fully specified RFM; it tests a provisional pivot-breakout interpretation.")
+        return {"candidate_model":candidates,"execution":report,
+                "warning":"Exploratory in-sample research only. No out-of-sample edge validated."}
+    except (ValueError,TypeError,KeyError,OverflowError,ZeroDivisionError) as exc:
+        raise HTTPException(status_code=400,detail="Invalid candidate backtest: "+str(exc)) from exc
