@@ -1,129 +1,124 @@
 <!doctype html>
 <html lang="pt-PT">
 <head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
-<title>RFM Quant — Painel de investigação</title>
+<title>RFM Quant — Modelo e Backtest</title>
 <style>
-:root{color-scheme:dark;font-family:Inter,system-ui,-apple-system,Segoe UI,Arial,sans-serif;background:#0a101b;color:#edf2ff}
-*{box-sizing:border-box}body{margin:0}
-.shell{max-width:1320px;margin:auto;padding:27px 24px 40px}
-header,.between{display:flex;justify-content:space-between;align-items:center;gap:14px;flex-wrap:wrap}
-.brand{font-size:23px;font-weight:850;letter-spacing:-.7px}.brand em{color:#89abff;font-style:normal}
-.bubble{background:#162b27;border:1px solid #346959;color:#9ce3cc;border-radius:100px;padding:7px 12px;font-size:12px}
-h1{font-size:clamp(24px,4vw,33px);margin:38px 0 8px;letter-spacing:-.6px}h2{font-size:18px;margin:0 0 6px}p,.muted{color:#9dacbf;line-height:1.6}p{margin:8px 0 18px}
-.panel{border-radius:16px;background:#111c2b;border:1px solid #26364d;padding:22px;min-width:0}
-.cards{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:14px;margin:24px 0}
-.panel small{color:#9aacc1}.number{font-size:29px;font-weight:800;letter-spacing:-.4px;margin:11px 0 5px}
-.layout{display:grid;grid-template-columns:minmax(0,1.8fr) minmax(285px,1fr);gap:16px}
-.stack{display:grid;gap:16px}
-.toolbar{display:flex;flex-wrap:wrap;align-items:end;gap:12px;margin:18px 0}
-label{font-size:12px;color:#b1c2d7;display:flex;flex-direction:column;gap:6px}
-select,button{border:1px solid #3a4e68;background:#1b2b42;color:#eaf0fd;border-radius:9px;padding:10px 12px;font:inherit;font-size:13px;min-height:42px}
-button{cursor:pointer;background:#315acc;border-color:#4268cf;font-weight:650}button:hover{filter:brightness(1.15)}
-button:disabled{opacity:.5;cursor:wait}.secondary{background:#1b2b42;border-color:#40536b}
-select{min-width:120px;cursor:pointer}
-.status{font-size:13px;color:#aec0d7;line-height:1.5;min-height:20px}.error{color:#ffaaaa}
-.positive{color:#8bdcba}.warning{color:#ffd9a3}.pill{border-radius:99px;padding:3px 9px;font-size:11px;background:#1d2c40;color:#b5c8e2;display:inline-block}
-.chart{width:100%;height:230px;background:#0b1422;border-radius:10px;border:1px solid #203047;margin:14px 0}
-.chart-empty{height:230px;display:flex;align-items:center;justify-content:center;color:#8297b1}
-.tablewrap{overflow:auto;max-height:390px}table{width:100%;border-collapse:collapse;text-align:left}
-th,td{border-bottom:1px solid #26374d;padding:11px 9px;font-size:12px;white-space:nowrap}
-th{color:#95a9c0;font-weight:650;position:sticky;top:0;background:#111c2b}
-tr[data-contract]{cursor:pointer}tr[data-contract]:hover{background:#1b2c45}
-.mono{font-variant-numeric:tabular-nums;font-family:ui-monospace,SFMono-Regular,Consolas,monospace}
-.meta{font-size:12px;color:#95abc7;margin-top:10px}
-hr{border:0;border-top:1px solid #28374c;margin:19px 0}
-footer{font-size:12px;color:#8197b1;margin-top:26px}
-a{color:#9abaff}
-@media(max-width:950px){.layout{grid-template-columns:1fr}.cards{grid-template-columns:repeat(2,1fr)}}
-@media(max-width:520px){.shell{padding:18px 14px}.cards{grid-template-columns:1fr 1fr}.number{font-size:23px}.panel{padding:16px}select{min-width:110px}}
-</style></head>
-<body><main class="shell">
-<header><div class="brand">RFM <em>Quant</em> <span class="pill">BETA</span></div><div class="bubble">INVESTIGAÇÃO · SEM ORDENS REAIS</div></header>
-<h1>Pesquisa quantitativa de criptomoedas</h1>
-<p>Dados públicos da OKX, verificação do histórico e ferramentas de investigação. Ainda não existem resultados validados da estratégia RFM.</p>
-<section class="cards">
-<div class="panel"><small>Criptomoedas selecionadas</small><div class="number" id="watchcount">—</div><small>Universo configurado</small></div>
-<div class="panel"><small>SWAP USDT encontrados</small><div class="number" id="swapcount">—</div><small>Catálogo público da OKX</small></div>
-<div class="panel"><small>Velas carregadas</small><div class="number" id="barcount">—</div><small id="coveragedays">A selecionar o mercado</small></div>
-<div class="panel"><small>Estado do servidor</small><div class="number" id="health">A verificar</div><small id="updated">Serviço Render</small></div>
+:root{font-family:Inter,system-ui,-apple-system,Segoe UI,Arial,sans-serif;color:#eaf0fa;background:#0b101a;color-scheme:dark}
+*{box-sizing:border-box}body{margin:0}.wrap{max-width:1100px;margin:auto;padding:26px 22px 70px}
+header{display:flex;align-items:center;justify-content:space-between;gap:16px;margin-bottom:46px}
+.logo{font-size:23px;font-weight:800;letter-spacing:-.7px}.logo span{color:#80a5ff}
+.tag{border:1px solid #365b4d;background:#142921;color:#a2e6c7;padding:7px 12px;border-radius:100px;font-size:12px}
+h1{font-size:clamp(29px,4vw,43px);line-height:1.15;letter-spacing:-1.3px;margin:0 0 12px}h2{font-size:20px;margin:0 0 7px}h3{font-size:15px;margin:0 0 6px}
+p{color:#a2b2c9;line-height:1.65;margin:0}.intro{max-width:700px;margin-bottom:28px}
+.pipeline{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:9px;margin:26px 0 28px}
+.step{background:#121d2d;border:1px solid #293c56;border-radius:12px;padding:13px 10px;min-height:82px}
+.step small{display:block;color:#87a0c0;font-size:11px;margin-bottom:9px}.step strong{font-size:14px}.step.active{border-color:#587ce2;background:#192b4b}
+.card{background:#121c2b;border:1px solid #2b3b53;border-radius:18px;padding:24px;margin-bottom:17px}
+.heading{display:flex;justify-content:space-between;align-items:center;gap:14px;flex-wrap:wrap;margin-bottom:22px}
+.num{display:inline-flex;align-items:center;justify-content:center;background:#29488c;color:#fff;border-radius:9px;width:29px;height:29px;font-weight:750;margin-right:10px}
+.fields{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:14px}
+label{display:flex;flex-direction:column;gap:8px;color:#a9b9d1;font-size:13px}
+select,button{font:inherit;border-radius:10px;min-height:46px}
+select{width:100%;background:#1b293c;border:1px solid #3a506c;color:#f0f4ff;padding:11px}
+button{border:0;background:#527bf0;color:#fff;padding:12px 22px;font-weight:750;cursor:pointer}
+button:hover{background:#638af8}button:disabled{opacity:.55;cursor:wait}
+.action{display:flex;align-items:center;gap:16px;flex-wrap:wrap;margin-top:24px}
+.status{color:#a9bedc;font-size:13px;line-height:1.5}.error{color:#ffaaa7}
+.summary{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px;margin:18px 0}
+.metric{background:#17263a;border:1px solid #2a3e57;border-radius:12px;padding:18px}
+.metric span{display:block;color:#a6bad3;font-size:12px}.metric strong{display:block;font-size:26px;letter-spacing:-.6px;margin-top:9px}
+.note{border-left:3px solid #6387da;background:#18243a;padding:14px 17px;border-radius:0 10px 10px 0;color:#c0cee1;font-size:13px;line-height:1.65;margin-top:15px}
+.muted{color:#91a6c1}.hidden{display:none!important}
+.tablewrap{overflow-x:auto;margin-top:14px}table{border-collapse:collapse;width:100%;text-align:left}th,td{padding:12px 11px;border-bottom:1px solid #2b3b50;font-size:13px;white-space:nowrap}th{color:#98afce;font-weight:600}
+.details{margin-top:18px}summary{cursor:pointer;color:#bfd1ec;font-weight:600;padding:8px 0}details p{margin:8px 0}
+.badge{font-size:12px;border-radius:50px;padding:5px 10px;background:#233752;color:#c5d8f8}
+.empty{padding:25px 10px;text-align:center;color:#a9b8cb}
+.footer{font-size:12px;color:#8096b2;margin-top:30px;display:flex;justify-content:space-between;gap:12px;flex-wrap:wrap}
+a{color:#a5c2ff}
+@media(max-width:780px){.pipeline{grid-template-columns:repeat(5,minmax(110px,1fr));overflow:auto}.fields,.summary{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media(max-width:480px){.wrap{padding:20px 14px 45px}.card{padding:18px}.summary{gap:8px}.metric{padding:13px}.metric strong{font-size:21px}.fields{grid-template-columns:1fr}.tag{font-size:10px}header{margin-bottom:32px}}
+</style>
+</head>
+<body><main class="wrap">
+<header><div class="logo">RFM <span>Quant</span></div><span class="tag">Pesquisa · sem ordens reais</span></header>
+<h1>Da tua estratégia aos resultados.</h1>
+<p class="intro">Uma única sequência: escolhes os dados, o modelo encontra oportunidades, a estratégia define as ordens e o backtest mostra o que aconteceu.</p>
+<div class="pipeline" aria-label="Processo de investigação">
+<div class="step active"><small>01 · Dados</small><strong>Input</strong></div>
+<div class="step"><small>02 · Análise</small><strong>Modelo</strong></div>
+<div class="step"><small>03 · Sinais</small><strong>Output</strong></div>
+<div class="step"><small>04 · Regras</small><strong>Estratégia</strong></div>
+<div class="step"><small>05 · Execução</small><strong>Ordens simuladas</strong></div>
+</div>
+<section class="card">
+<div class="heading"><div><h2><span class="num">1</span> Configurar o teste</h2><p>Começa com as definições principais. O resto fica automático.</p></div><span class="badge">Dados públicos OKX</span></div>
+<div class="fields">
+<label>Criptomoeda<select id="market"><option value="BTC-USDT-SWAP">BTC / USDT</option><option value="ETH-USDT-SWAP">ETH / USDT</option><option value="SOL-USDT-SWAP">SOL / USDT</option></select></label>
+<label>Timeframe<select id="timeframe"><option value="15m" selected>15 minutos</option><option value="1H">1 hora</option><option value="4H">4 horas</option></select></label>
+<label>Histórico<select id="bars"><option value="650">650 velas</option><option value="1200">1 200 velas</option><option value="2000" selected>2 000 velas</option></select></label>
+<label>Entrada Fibonacci<select id="entry"><option value="75" selected>75% · 3R teóricos</option><option value="67">67% · 2,03R teóricos</option></select></label>
+</div>
+<div class="action"><button id="run">Executar backtest</button><span id="status" class="status" role="status">Pronto para começar.</span></div>
+<div class="note"><strong>Versão atual do modelo:</strong> hipótese automática baseada em pivôs confirmados e quebra de estrutura. A Fibonacci usa 0% como alvo e 100% como stop. FVG, POC e alinhamento 4H não são requisitos obrigatórios. Ainda estamos a validar se esta interpretação corresponde aos teus setups.</div>
 </section>
-<section class="layout">
-<div class="stack">
-<div class="panel">
-<div class="between"><div><h2>Explorador de preços</h2><div class="muted">Gráfico do fecho e velas históricas confirmadas</div></div><span class="pill">OKX · OHLCV</span></div>
-<div class="toolbar">
-<label>Contrato<select id="symbol"><option value="BTC-USDT-SWAP">BTC-USDT-SWAP</option></select></label>
-<label>Timeframe<select id="bar"><option value="15m">15 min</option><option value="1H">1 hora</option><option value="4H" selected>4 horas</option><option value="1D">1 dia</option></select></label>
-<label>Velas<select id="bars"><option value="100">100</option><option value="300">300</option><option value="650" selected>650</option><option value="1200">1200</option><option value="2000">2000</option></select></label>
-<button id="history-btn">Carregar histórico</button>
-</div>
-<div id="history-status" class="status" role="status">A aguardar dados...</div>
-<div id="chart" class="chart-empty">Sem histórico carregado</div>
-<div class="tablewrap"><table><thead><tr><th>Data (UTC)</th><th>Abertura</th><th>Máximo</th><th>Mínimo</th><th>Fecho</th></tr></thead><tbody id="candles"></tbody></table></div>
-<div class="meta" id="history-meta">Velas confirmadas, ordenadas no tempo. Não há preenchimento artificial de falhas.</div>
-</div>
-<div class="panel">
-<div class="between"><div><h2>Auditoria de continuidade</h2><div class="muted">Verificação de histórico de 4H durante cerca de 90 dias</div></div><button class="secondary" id="audit-btn">Auditar 4H</button></div>
-<div class="status" id="audit-result" style="margin-top:14px">Ainda não executada.</div>
-<hr><div class="meta">Uma auditoria positiva não confirma spreads, profundidade do livro, funding nem vantagem estatística. É apenas um filtro de qualidade das velas.</div>
-</div>
-</div>
-<div class="stack">
-<div class="panel">
-<div class="between"><div><h2>Universo de investigação</h2><div class="muted">Disponibilidade atual dos 31 símbolos</div></div><span class="pill">Contratos, não resultados</span></div>
-<div id="universe-status" class="status" style="margin:13px 0">A consultar catálogo...</div>
-<div class="tablewrap" style="max-height:580px"><table><thead><tr><th>Ativo</th><th>USDT SWAP</th><th>USDC SWAP</th></tr></thead><tbody id="universe-table"></tbody></table></div>
-<div class="meta">Os ativos sem contrato nesta consulta não são automaticamente substituídos por outros com nomes semelhantes. A disponibilidade também pode variar conforme a região.</div>
-</div>
-<div class="panel"><h2>Motor RFM</h2><p>Já podes calcular Fibonacci + POC e reproduzir um cenário histórico manual no laboratório. O detetor de eventos é experimental: ainda não há geração automática de entradas RFM validada.</p>
-<div class="toolbar"><button class="secondary" id="structure-btn">Detetar BOS, CHoCH, FVG e Sweeps · 15m</button><a href="/poc" style="display:inline-block;border-radius:9px;border:1px solid #4168cb;background:#254ba5;color:#fff;padding:11px 13px;font-size:13px;font-weight:700">Abrir laboratório Fib + POC</a></div><div class="status" id="structure-result">Deteção ainda não executada.</div><hr><div class="status warning">Fibonacci confirmada: entrada na zona 67–75%, SL no 100% e TP no 0%. RR teórico: 2,03R (67%) a 3R (75%), antes de custos.</div>
-<div class="meta" style="margin-top:14px">Sem backtesting aprovado, sem previsão de lucros e sem negociação automática.</div>
-</div>
-</div>
+<section class="card hidden" id="results" aria-live="polite">
+<div class="heading"><div><h2><span class="num">2</span> Resultado do backtest</h2><p id="sample">Resultados simulados com dados históricos.</p></div><span class="badge">Simulação</span></div>
+<div class="summary" id="metrics"></div>
+<div class="note" id="interpretation"></div>
+<details class="details"><summary>Como foram calculados estes resultados?</summary><p>O modelo gera candidatos depois do fecho da vela. A estratégia usa ordem limitada na Fibonacci escolhida, stop no 100% e take-profit no 0%. O simulador só permite entradas em velas posteriores, inclui comissões e slippage e assume stop primeiro se ambos os níveis forem tocados na mesma vela.</p><p>Os resultados são da amostra observada, sem financiamento, liquidações ou validação fora da amostra. Não demonstram rentabilidade futura.</p></details>
 </section>
-<footer>RFM Quant v0.10 · Investigação estatística · <a href="/docs">Documentação técnica</a> · Nenhuma API de execução de ordens configurada.</footer>
+<section class="card hidden" id="orders">
+<div class="heading"><div><h2><span class="num">3</span> Ordens simuladas</h2><p>É este o output final da estratégia. Nenhuma ordem é enviada à OKX.</p></div><span class="badge" id="order-count">0 operações</span></div>
+<div class="tablewrap"><table><thead><tr><th>Data de entrada</th><th>Direção</th><th>Entrada</th><th>Saída</th><th>Resultado</th><th>Motivo</th></tr></thead><tbody id="trades"></tbody></table></div>
+<div id="no-trades" class="empty hidden">Nenhuma operação fechada nesta amostra. Não há resultados para inventar.</div>
+<details class="details"><summary>Ver sinais encontrados e operações não executadas</summary><p id="signals-info"></p><div class="tablewrap"><table><thead><tr><th>Data do sinal</th><th>Direção</th><th>Entrada planeada</th><th>Stop</th><th>Alvo</th></tr></thead><tbody id="signals"></tbody></table></div></details>
+</section>
+<section class="card"><h2>O que estamos a construir</h2><p><strong>Input:</strong> velas históricas. <strong>Modelo:</strong> deteta padrões e mede confluências. <strong>Output:</strong> candidatos a entrada. <strong>Estratégia:</strong> decide as regras de risco e entrada. <strong>Ordens:</strong> execução simulada para backtesting. A ligação a ordens reais não está ativada.</p></section>
+<div class="footer"><span>RFM Quant v0.12 · Interface simplificada</span><span><a href="/poc">Laboratório avançado</a> · <a href="/docs">API</a></span></div>
 </main>
 <script>
-const el=id=>document.getElementById(id);
-const safeNum=v=>Number.isFinite(Number(v))?Number(v).toLocaleString("pt-PT",{maximumSignificantDigits:9}):"—";
-async function api(path){const response=await fetch(path,{cache:"no-store"});let data;try{data=await response.json()}catch(e){throw Error("Resposta inválida do servidor")}
-if(!response.ok){let detail=data.detail;throw Error(typeof detail==="string"?detail:(detail&&detail.message)||"HTTP "+response.status)}return data}
-function cell(tr,value){const td=document.createElement("td");td.textContent=String(value);tr.append(td);return td}
-function showChart(data){const target=el("chart");target.replaceChildren();target.className="chart";
-const candles=data.slice(-260);if(candles.length<2){target.className="chart-empty";target.textContent="Histórico insuficiente para traçar gráfico";return}
-const ns="http://www.w3.org/2000/svg";const svg=document.createElementNS(ns,"svg");svg.setAttribute("viewBox","0 0 900 240");svg.setAttribute("preserveAspectRatio","none");svg.style.width="100%";svg.style.height="100%";
-const vals=candles.map(x=>Number(x.close));const min=Math.min(...vals);const max=Math.max(...vals);const spread=Math.max(max-min,Math.max(max,1)*0.001);
-const pts=vals.map((v,i)=>[18+(i/(vals.length-1))*862,215-((v-min)/spread)*190]);
-for(const y of [32,90,150,215]){const line=document.createElementNS(ns,"line");line.setAttribute("x1","18");line.setAttribute("x2","880");line.setAttribute("y1",String(y));line.setAttribute("y2",String(y));line.setAttribute("stroke","#273a54");line.setAttribute("stroke-width","1");svg.append(line)}
-const path=document.createElementNS(ns,"polyline");path.setAttribute("points",pts.map(p=>p.map(x=>x.toFixed(2)).join(",")).join(" "));path.setAttribute("fill","none");path.setAttribute("stroke","#93b4ff");path.setAttribute("stroke-width","2.5");path.setAttribute("vector-effect","non-scaling-stroke");svg.append(path);target.append(svg);
-target.setAttribute("aria-label","Gráfico da série de preços de fecho. Mínimo "+safeNum(min)+", máximo "+safeNum(max))}
-let requestId=0;
-async function loadHistory(){const current=++requestId;const button=el("history-btn");button.disabled=true;el("history-status").textContent="A recolher páginas do histórico da OKX...";
-try{const qs=new URLSearchParams({inst_id:el("symbol").value,bar:el("bar").value,bars:el("bars").value});const data=await api("/api/okx/history?"+qs.toString());if(current!==requestId)return;
-el("barcount").textContent=data.returned_bars;el("coveragedays").textContent=safeNum(data.coverage_days)+" dias de cobertura";
-const tbody=el("candles");tbody.replaceChildren();for(const c of data.candles.slice(-35).reverse()){const tr=document.createElement("tr");cell(tr,new Date(c.ts).toISOString().slice(0,16).replace("T"," "));for(const key of ["open","high","low","close"]){cell(tr,safeNum(c[key])).className="mono"}tbody.append(tr)}
-showChart(data.candles);
-el("history-status").textContent=data.returned_bars+" de "+data.requested_bars+" velas · "+data.pages_requested+" páginas · "+data.missing_intervals+" intervalos em falta";
-el("history-meta").textContent="UTC · "+safeNum(data.coverage_days)+" dias de cobertura · "+data.rejected.malformed+" velas inválidas · "+data.rejected.duplicate+" duplicadas. Não são dados de backtesting certificados."}
-catch(e){if(current===requestId){el("history-status").textContent="Erro ao carregar histórico: "+e.message;el("history-status").classList.add("error")}}
-finally{if(current===requestId)button.disabled=false}}
-async function loadUniverse(){try{const u=await api("/api/okx/universe");el("watchcount").textContent=u.count;el("swapcount").textContent=u.available_usdt;el("universe-status").textContent=u.available_usdt+" pares USDT SWAP encontrados no catálogo.";
-const tbody=el("universe-table");tbody.replaceChildren();const select=el("symbol");const old=select.value;select.replaceChildren();
-for(const item of u.assets){const tr=document.createElement("tr");cell(tr,item.symbol).style.fontWeight="700";cell(tr,item.usdt_swap?"Disponível":"—").className=item.usdt_swap?"positive":"muted";cell(tr,item.usdc_swap?"Disponível":"—").className=item.usdc_swap?"positive":"muted";
-const candidate=item.usdt_swap||item.usdc_swap;if(candidate){tr.dataset.contract=candidate;tr.title="Selecionar "+candidate;const option=document.createElement("option");option.value=candidate;option.textContent=candidate;select.append(option);tr.addEventListener("click",()=>{select.value=candidate;loadHistory()})}tbody.append(tr)}
-if([...select.options].some(o=>o.value===old))select.value=old;else if([...select.options].some(o=>o.value==="BTC-USDT-SWAP"))select.value="BTC-USDT-SWAP";
-if(!select.options.length){const opt=document.createElement("option");opt.textContent="Sem contratos";opt.value="";select.append(opt);el("history-status").textContent="Não foram encontrados contratos selecionáveis";return}
-await loadHistory()}
-catch(e){el("universe-status").textContent="Não foi possível consultar contratos: "+e.message;el("universe-status").classList.add("error");await loadHistory()}}
-async function audit(){const button=el("audit-btn");button.disabled=true;const result=el("audit-result");result.classList.remove("error");const symbol=el("symbol").value.split("-")[0];result.textContent="A verificar "+symbol+" em 4H (650 velas)...";
-try{const quote=el("symbol").value.split("-")[1];const d=await api("/api/okx/coverage/"+encodeURIComponent(symbol)+"?bar=4H&bars=650&minimum_days=90&quote="+encodeURIComponent(quote));
-if(d.status==="no_live_selected_swap"){result.textContent=symbol+": não há SWAP USDT ativo no catálogo desta consulta.";return}
-const q=d.quality;result.textContent=symbol+": "+(q.status==="window_quality_pass"?"amostra sem alertas":"requer revisão")+" · "+q.bars_checked+" velas · "+q.coverage_days+" dias · "+q.missing_intervals+" lacunas"+(q.flags.length?" · Alertas: "+q.flags.join(", "):"")+" · Liquidez não certificada."}
-catch(e){result.textContent="Erro na auditoria: "+e.message;result.classList.add("error")}finally{button.disabled=false}}
-async function structure(){const button=el("structure-btn");button.disabled=true;const result=el("structure-result");result.classList.remove("error");result.textContent="A calcular pivots, BOS e FVG em 15m...";try{const qs=new URLSearchParams({inst_id:el("symbol").value,bar:"15m",bars:"650",pivot_span:"3"});const d=await api("/api/research/structure?"+qs);const x=d.counts;result.textContent=d.instrument+" · BOS altistas: "+x.bos_bullish+" · BOS baixistas: "+x.bos_bearish+" · FVG altistas: "+x.fvg_bullish+" · FVG baixistas: "+x.fvg_bearish+" · SSL sweeps: "+x.ssl_sweeps+" · BSL sweeps: "+x.bsl_sweeps+" · CHoCH candidatos: "+x.choch_candidates+" · Amostra: "+d.history_coverage_days+" dias. São eventos técnicos experimentais, não sinais de entrada."}catch(e){result.textContent="Não foi possível analisar estrutura: "+e.message;result.classList.add("error")}finally{button.disabled=false}}
-async function startup(){try{const h=await api("/health");el("health").textContent=h.status==="ok"?"Online":"Erro";el("updated").textContent="Verificado "+new Date().toLocaleTimeString("pt-PT")}catch(e){el("health").textContent="Erro"}
-await loadUniverse()}
-el("history-btn").addEventListener("click",()=>{el("history-status").classList.remove("error");loadHistory()});
-el("audit-btn").addEventListener("click",audit);el("structure-btn").addEventListener("click",structure);el("symbol").addEventListener("change",loadHistory);el("bar").addEventListener("change",loadHistory);el("bars").addEventListener("change",loadHistory);
-startup();
-</script></body></html>
+const $=id=>document.getElementById(id);
+const fmt=(n,d=2)=>Number(n).toLocaleString("pt-PT",{maximumFractionDigits:d});
+const date=ts=>new Date(Number(ts)).toLocaleString("pt-PT",{timeZone:"UTC",day:"2-digit",month:"2-digit",year:"numeric",hour:"2-digit",minute:"2-digit"})+" UTC";
+const cell=(tr,value)=>{const td=document.createElement("td");td.textContent=String(value);tr.append(td)};
+const metric=(label,value)=>{const el=document.createElement("div");el.className="metric";const a=document.createElement("span"),b=document.createElement("strong");a.textContent=label;b.textContent=value;el.append(a,b);return el};
+async function json(url,options){const r=await fetch(url,{cache:"no-store",...options});let data;try{data=await r.json()}catch(e){throw Error("O servidor não devolveu dados válidos.")}if(!r.ok)throw Error(typeof data.detail==="string"?data.detail:"Erro HTTP "+r.status);return data}
+function status(message,error=false){$("status").textContent=message;$("status").classList.toggle("error",error)}
+async function run(){
+const button=$("run");button.disabled=true;$("results").classList.add("hidden");$("orders").classList.add("hidden");status("1/3 · A carregar histórico confirmado...");
+try{
+const market=$("market").value,bar=$("timeframe").value,bars=$("bars").value;
+const query=new URLSearchParams({inst_id:market,bar,bars});
+const history=await json("/api/okx/history?"+query);
+if(history.returned_bars<40)throw Error("Histórico insuficiente para testar o modelo.");
+if(history.missing_intervals>0)throw Error("O histórico tem intervalos em falta. Seleciona outro período ou mercado.");
+status("2/3 · A identificar oportunidades...");
+const payload={candles:history.candles,bar,candidate_settings:{pivot_span:3,entry_level:Number($("entry").value),require_fvg:false,min_swing_fraction:.005,expiry_bars:8,max_signals:200},execution_settings:{initial_equity:10000,risk_pct:1,fee_bps:5,slippage_bps:2,max_exposure:1,min_rr:2,max_hold_bars:96}};
+const report=await json("/api/research/candidate-backtest",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify(payload)});
+status("3/3 · A apresentar resultados...");
+render(history,report);
+status("Teste concluído. Estes resultados são apenas de investigação.");
+}catch(e){status("Não foi possível concluir: "+e.message,true)}finally{button.disabled=false}}
+function render(history,report){
+const model=report.candidate_model,execution=report.execution,summary=execution.summary,boot=report.bootstrap;
+$("results").classList.remove("hidden");$("orders").classList.remove("hidden");
+$("sample").textContent=history.instrument+" · "+history.returned_bars+" velas · "+history.coverage_days+" dias de histórico.";
+const metrics=$("metrics");metrics.replaceChildren();
+for(const [label,value] of [["Oportunidades",model.signal_count],["Operações fechadas",summary.closed_trades],["Win rate",summary.win_rate_pct===null?"—":fmt(summary.win_rate_pct)+"%"],["Profit factor",summary.profit_factor===null?"—":fmt(summary.profit_factor)],["Expectancy",summary.expectancy_r===null?"—":fmt(summary.expectancy_r,3)+"R"],["Retorno simulado",fmt(summary.net_return_pct)+"%"],["Drawdown fechado",fmt(summary.max_closed_trade_drawdown_pct)+"%"],["Capital final fictício",fmt(summary.ending_equity)+" USDT"]])metrics.append(metric(label,value));
+const issues=[];if(model.truncated)issues.push("A lista de candidatos foi limitada a 200; a amostra não foi integralmente simulada.");
+if(summary.closed_trades<10)issues.push("Há menos de 10 operações fechadas. Não é possível tirar conclusões estatísticas.");
+else issues.push("O teste é dentro da amostra; ainda falta validação fora da amostra.");
+if(boot.status==="exploratory_bootstrap")issues.push("Reamostragem exploratória: média por trade entre "+fmt(boot.mean_r_p05,3)+"R e "+fmt(boot.mean_r_p95,3)+"R (percentis 5–95). Não é uma previsão.");
+issues.push("Modelo provisório, ainda não validado como a tua RFM.");
+$("interpretation").textContent=issues.join(" ");
+$("order-count").textContent=summary.closed_trades+" operações";
+const trades=$("trades");trades.replaceChildren();
+for(const t of execution.trades.slice(-30).reverse()){const tr=document.createElement("tr");for(const v of [date(t.entry_ts),t.side==="long"?"Compra":"Venda",fmt(t.entry_price,6),fmt(t.exit_price,6),fmt(t.pnl)+" USDT ("+fmt(t.r_multiple,2)+"R)",t.exit_reason])cell(tr,v);trades.append(tr)}
+$("no-trades").classList.toggle("hidden",execution.trades.length!==0);
+$("signals-info").textContent="Foram gerados "+model.signal_count+" sinais. Alguns podem não ter sido executados porque o preço não chegou à entrada, a operação anterior ainda estava aberta ou não existiam velas suficientes. Motivos: "+JSON.stringify(summary.skipped)+".";
+const signals=$("signals");signals.replaceChildren();
+for(const s of model.signals.slice(-30).reverse()){const tr=document.createElement("tr");for(const v of [date(s.signal_ts),s.side==="long"?"Compra":"Venda",fmt(s.entry,6),fmt(s.stop,6),fmt(s.take,6)])cell(tr,v);signals.append(tr)}
+}
+$("run").addEventListener("click",run);
+</script>
+</body></html>
