@@ -20,6 +20,7 @@ from execution import simulate
 from rfm_candidates import generate_candidates
 from rfm_impulse_candidates import generate_impulse_candidates
 from research.quant_pipeline import prepare_dataset, walk_forward
+from research.robustness import block_bootstrap_r
 from history import INTERVAL_MS
 
 
@@ -147,6 +148,7 @@ def run_research(candles, instrument, bar, entry_level=75,
         dataset=pd.DataFrame()
         report["walk_forward"]={"status":"insufficient_data",
                                 "reason":"no completed trades"}
+    report["block_bootstrap"]=block_bootstrap_r(with_be["trades"])
     return {"model":model,"execution":with_be,
             "without_break_even_execution":without_be,
             "dataset":dataset,"report":report}
