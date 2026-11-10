@@ -8,6 +8,9 @@ import pandas as pd
 
 FEATURES=["side_long","swing_fraction","fvg_in_gold_zone","entry_level",
           "hour_utc","range_pct_12","return_12","volume_ratio_12"]
+# Added only when genuinely present for every labeled event; missing POC is NOT False.
+OPTIONAL_FEATURES=["liquidity_zone_count","liquidity_bsl_count","liquidity_ssl_count",
+                   "liquidity_eqh_pairs","liquidity_eql_pairs","poc_in_gold_zone_proxy"]
 
 def prepare_dataset(candles:pd.DataFrame,events:pd.DataFrame,trades:pd.DataFrame)->pd.DataFrame:
     required=[("candles",candles,{"ts","open","high","low","close","volume_contracts"}),
@@ -43,6 +46,12 @@ def prepare_dataset(candles:pd.DataFrame,events:pd.DataFrame,trades:pd.DataFrame
     df["fvg_in_gold_zone"]=df.fvg_overlaps_gold_zone.astype(int)
     df["entry_level"]=pd.to_numeric(df.entry_level)
     df["hour_utc"]=pd.to_datetime(df.signal_ts,unit="ms",utc=True).dt.hour
+    for col in OPTIONAL_FEATURES:
+        if col in df:
+            if col=="poc_in_gold_zone_proxy":
+                df[col]=df[col].map({True:1,False:0,1:1,0:0})
+            else:
+                df[col]=pd.to_numeric(df[col],errors="coerce")
     df["r_multiple"]=pd.to_numeric(df.r_multiple)
     df=df.replace([np.inf,-np.inf],np.nan).dropna(subset=FEATURES+["r_multiple"])
     df["target_win"]=(df.r_multiple>0).astype(int)
@@ -57,6 +66,10 @@ def walk_forward(dataset:pd.DataFrame,*,min_train=80,test_size=25,
     if len(d)<min_train+test_size:
         return {"status":"insufficient_data","trades":len(d),
                 "required_at_least":min_train+test_size,"folds":[]}
+    feature_columns=FEATURES+[
+        col for col in OPTIONAL_FEATURES
+        if col in d.columns and pd.to_numeric(d[col],errors="coerce").notna().all()
+    ]
     starts=list(range(min_train,len(d)-test_size+1,test_size))[-n_splits:]
     folds=[]
     for start in starts:
@@ -73,21 +86,28 @@ def walk_forward(dataset:pd.DataFrame,*,min_train=80,test_size=25,
                             subsample=1.,colsample_bytree=1.,
                             objective="binary:logistic",eval_metric="logloss",
                             random_state=seed,n_jobs=1)
-        model.fit(train[FEATURES],train.target_win)
-        prob=model.predict_proba(test[FEATURES])[:,1]
+        model.fit(train[feature_columns],train.target_win)
+        prob=model.predict_proba(test[feature_columns])[:,1]
         y=test.target_win.to_numpy()
+        selected=prob>=0.5  # predeclared threshold; this is a diagnostic, not a portfolio backtest
+        r_values=test.r_multiple.to_numpy(dtype=float)
         folds.append({"status":"evaluated","train_trades":len(train),
                       "test_trades":len(test),
                       "test_start_ts":int(test.signal_ts.iloc[0]),
                       "test_end_ts":int(test.signal_ts.iloc[-1]),
                       "xgboost_brier":round(float(np.mean((prob-y)**2)),6),
                       "baseline_brier":round(float(np.mean((baseline-y)**2)),6),
-                      "mean_test_r":round(float(test.r_multiple.mean()),5)})
+                      "mean_test_r":round(float(test.r_multiple.mean()),5),
+                      "selected_by_model":int(selected.sum()),
+                      "model_selected_mean_r":round(float(r_values[selected].mean()),5) if selected.any() else None,
+                      "model_selected_r_sum":round(float(r_values[selected].sum()),5),
+                      "all_test_r_sum":round(float(r_values.sum()),5)})
     good=[f for f in folds if f["status"]=="evaluated"]
     return {"status":"evaluated" if good else "insufficient_data",
-            "trades":len(d),"features":FEATURES,"folds":folds,
+            "trades":len(d),"features":feature_columns,"folds":folds,
             "mean_xgboost_brier":round(float(np.mean([f["xgboost_brier"] for f in good])),6) if good else None,
             "mean_baseline_brier":round(float(np.mean([f["baseline_brier"] for f in good])),6) if good else None,
             "warnings":["Only executed closed trades have labels; selection bias remains.",
                         "This classifier does not place orders or prove strategy profitability.",
+                        "Threshold 0.5 is a fixed exploratory selection diagnostic: overlapping signals and risk sizing are not re-simulated.",
                         "An independent untouched final holdout is still required."]}
