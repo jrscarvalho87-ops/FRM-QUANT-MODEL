@@ -1,0 +1,48 @@
+# RFM Quant — specification log
+
+## What is implemented (v0.8)
+- Market universe: 31 requested assets, **including GRAM (not GRASS)**.
+- Exact instrument matching against OKX's current public SWAP catalog; no guessed mappings.
+- Confirmed 15m / 1H / 4H and other OHLCV candle collection, max 2,000 bars per request.
+- Bounded backwards pagination, de-duplication, no filling missing candles.
+- Quality screening for gaps, zero volume and abnormal bar ranges (heuristics, not liquidity approval).
+- Experimental BOS detector based on pivots confirmed **only after** a right-hand window of closed bars.
+- Experimental three-candle FVG detector, first known at the third candle's close.
+- Execution simulator for **externally supplied** signals with next-bar entry eligibility, stop-first ambiguity, stop gaps, risk sizing, costs, and a cap on exposure.
+- Win rate, expectancy in R, profit factor, closed-trade drawdown and sample trades.
+- No trading credentials, live orders, predictions, or profit guarantees.
+
+## RFM detection — pending precise rule agreement
+We should NOT silently force a guessed trade signal from BOS/FVG events.
+Known intent:
+1. Context: 4H premium/discount, informational; 15m signal generation.
+2. BOS counts only once its candle closes.
+3. Bullish/bearish FVG is a three-candle gap and only exists at the third candle close.
+4. A liquidity sweep and CHoCH can be evidence, but not every setup needs CHoCH.
+5. Entry is intended around Fibonacci 67% or 75%, with the imbalance/FVG overlapping.
+6. Stop and take profit on every trade; planned risk/reward at least 2:1.
+
+### Critical arithmetic to resolve
+If 0, 67, 75, 100 are evenly spaced levels along one linear Fibonacci axis:
+- Entry 75, TP 100, SL 0: reward 25, risk 75 => 0.333R.
+- Entry 67, TP 100, SL 0: reward 33, risk 67 => 0.493R.
+This **is not 3R or 2R**. The actual Fib direction/anchor and SL definition must be reconciled before releasing RFM auto-signal backtests. No numbers should be manufactured by violating that rule.
+
+## Data restrictions and audit
+- Contract visibility is not proof of regional account eligibility.
+- A 90-day 4H OHLC window may pass while 15m has missing candles or terrible spreads.
+- Pairs must be screened against OHLC consistency and liquidity, including real spreads, order-book depth, fees and trading volume.
+- Today's surviving coins are not the same as the historical universe (survivorship bias).
+- Funding, liquidations, tick-level stop/TP ordering, partial fills, taxes, delistings, and market impact are **not modeled** yet.
+- This simulator uses conservative stop-first sequencing when TP and SL both touch inside a single candle, excludes unresolved positions at sample end, and reports closed-trade drawdown only.
+- Any result requires out-of-sample and walk-forward validation, realistic total costs, enough trades, and Monte Carlo robustness before any inference about edge.
+
+## Planned next milestones
+1. Test all components and confirm deployed HTTP endpoints and rendering.
+2. Review Fibonacci anchor+stop with example TradingView screenshot.
+3. Generate RFM candidate entries from confirmed structure, overlap with FVG and rule-based Fib levels; add explicit non-anticipation tests.
+4. Extend dataset beyond the limited API and persist reproducible dataset snapshots.
+5. Include funding, spreads and real contract specifications, realistic fill assumptions, out-of-sample splits, and parameter sensitivity.
+6. Add statistical reports, reject weak assets, and run simulated paper-trading only.
+
+The app is a research tool, not a broker or financial return generator.
