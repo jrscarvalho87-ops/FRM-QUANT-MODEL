@@ -225,7 +225,11 @@ def run_pinned_audit(base_url,output_dir):
             events=new["events"]
             context=[int(e["liquidity_unbreached_contextual_count"])
                      for e in events]
+            independent_context=[
+                int(e["liquidity_independent_unbreached_contextual_count"])
+                for e in events]
             zero_context=sum(x==0 for x in context)
+            zero_independent=sum(x==0 for x in independent_context)
             old=PREVIOUS_AUDITED[instrument]
             stats={
                 "instrument":instrument,"status":"verified_same_ohlcv_history",
@@ -242,6 +246,14 @@ def run_pinned_audit(base_url,output_dir):
                 "liquidity_context_observed_rate_pct":
                     round(100*(len(context)-zero_context)/len(context),2)
                     if context else None,
+                "liquidity_independent_zero_count":zero_independent,
+                "liquidity_independent_present_pct":
+                    round(100*(len(independent_context)-zero_independent)/
+                          len(independent_context),2)
+                    if independent_context else None,
+                "liquidity_independent_mean_count":
+                    round(sum(independent_context)/len(independent_context),4)
+                    if independent_context else None,
                 "new_trades_with_be":rerun["execution"]["summary"]["closed_trades"],
                 "new_return_pct_be":rerun["execution"]["summary"]["net_return_pct"],
                 "new_trades_without_be":rerun["without_break_even_execution"]["summary"]["closed_trades"],
