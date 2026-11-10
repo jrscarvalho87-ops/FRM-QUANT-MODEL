@@ -14,7 +14,7 @@ jobs:
       - name: Install dependencies
         run: python -m pip install -r requirements.txt "numpy>=2,<3" "pandas>=2,<3" "xgboost>=3,<4" "scikit-learn>=1.5,<2"
       - name: Compile Python sources
-        run: python -m compileall -q app.py data_quality.py market_audit.py history.py universe.py execution.py structure.py fibonacci.py volume_profile.py rfm_candidates.py research_stats.py structural_liquidity.py fvg_state.py htf_context.py rfm_impulse_candidates.py research tests
+        run: python -m compileall -q app.py data_quality.py market_audit.py history.py universe.py execution.py structure.py fibonacci.py volume_profile.py rfm_candidates.py research_stats.py structural_liquidity.py fvg_state.py htf_context.py swing_geometry.py swing_liquidity_context.py rfm_impulse_candidates.py research tests
       - name: Run data quality and audit tests
         run: python -m unittest discover -s tests -v
       - name: Check browser JavaScript syntax
