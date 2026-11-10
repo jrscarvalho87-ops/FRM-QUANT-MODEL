@@ -9,15 +9,19 @@ Only CLOSED candles may contribute to a signal.
 """
 from math import isfinite
 from fibonacci import levels
+from fvg_state import active_fvgs_overlapping_zone
+from structural_liquidity import structural_liquidity
+from volume_profile import approximate_poc
 
 
 def generate_candidates(candles, *, pivot_span=3, expiry_bars=8,
                         entry_level=75, require_fvg=False,
                         min_swing_fraction=0.005, interval_ms=900000,
-                        max_signals=200):
+                        max_signals=200, liquidity_min_zone_count=0):
     if not (2 <= pivot_span <= 10 and 1 <= expiry_bars <= 96
             and entry_level in (67,75) and 0 <= min_swing_fraction <= .25
-            and interval_ms > 0 and 1 <= max_signals <= 200):
+            and interval_ms > 0 and 1 <= max_signals <= 200
+            and 0 <= liquidity_min_zone_count <= 50):
         raise ValueError("Invalid candidate generator settings")
     bars=list(candles)
     if len(bars)>2000:
@@ -83,20 +87,31 @@ def generate_candidates(candles, *, pivot_span=3, expiry_bars=8,
             if abs(zero-hundred)/hundred<min_swing_fraction:
                 continue
             fib=levels(zero,hundred,side)
-            fvg=[]
-            for j in range(max(2,broken["index"]),i+1):
-                if side=="long" and lows[j]>highs[j-2]:
-                    lower,upper=highs[j-2],lows[j]
-                elif side=="short" and highs[j]<lows[j-2]:
-                    lower,upper=highs[j],lows[j-2]
-                else:
-                    continue
-                if min(upper,fib["entry_zone_high"])>max(lower,fib["entry_zone_low"]):
-                    fvg.append({"lower":lower,"upper":upper,
-                                "known_after_close_ts":times[j]+interval_ms})
+            # Only surviving (unfilled) three-candle gaps can overlap the Gold Zone.
+            fvg=active_fvgs_overlapping_zone(
+                bars,i,side,fib["entry_zone_low"],fib["entry_zone_high"],
+                start_index=broken["index"])
             fvg_overlap=bool(fvg)
             if require_fvg and not fvg_overlap:
                 continue
+            # Structural-liquidity counts are PROXY FEATURES; threshold=0 by default.
+            liquidity=structural_liquidity(
+                bars,i,pivot_span=pivot_span,interval_ms=interval_ms)
+            if liquidity["zone_count"]<liquidity_min_zone_count:
+                continue
+            # POC from confirmed OHLCV candles is only a volume-distribution proxy.
+            poc_inside=None
+            poc_price=None
+            if "volume_contracts" in bars[i]:
+                try:
+                    poc=approximate_poc(
+                        bars[opposite["index"]:i+1],opposite["ts"],times[i],
+                        interval_ms=interval_ms,zero_price=zero,
+                        hundred_price=hundred,side=side)
+                    poc_inside=poc["gold_zone"]["poc_inside_zone"]
+                    poc_price=poc["poc_price_approx"]
+                except ValueError:
+                    pass  # insufficient/invalid volume data: do not invent a POC
             entry=fib["level_67"] if entry_level==67 else fib["level_75"]
             # The execution simulator is responsible for next-bar eligibility,
             # risk sizing, fills, costs and conservative exit ordering.
@@ -109,6 +124,15 @@ def generate_candidates(candles, *, pivot_span=3, expiry_bars=8,
                 "anchor_0_ts":times[zero_idx],"zero_price":zero,"hundred_price":hundred,
                 "entry_level":entry_level,"fvg_overlaps_gold_zone":fvg_overlap,
                 "fvg_count":len(fvg),"broken_pivot_ts":broken["ts"],
+                "liquidity_zone_count":liquidity["zone_count"],
+                "liquidity_bsl_count":liquidity["bsl_count"],
+                "liquidity_ssl_count":liquidity["ssl_count"],
+                "liquidity_eqh_pairs":liquidity["eqh_pairs"],
+                "liquidity_eql_pairs":liquidity["eql_pairs"],
+                "liquidity_previous_day_available":liquidity["previous_day_available"],
+                "liquidity_previous_week_available":liquidity["previous_week_available"],
+                "poc_in_gold_zone_proxy":poc_inside,
+                "poc_price_approx":poc_price,
                 "notes":"Candidate based on confirmed pivots and breakout, not discretionary RFM."
             })
     truncated=len(signals)>max_signals
@@ -119,13 +143,16 @@ def generate_candidates(candles, *, pivot_span=3, expiry_bars=8,
         "status":"experimental_not_user_approved",
         "settings":{"pivot_span":pivot_span,"expiry_bars":expiry_bars,
                     "entry_level":entry_level,"require_fvg":require_fvg,
-                    "min_swing_fraction":min_swing_fraction},
+                    "min_swing_fraction":min_swing_fraction,
+                    "liquidity_min_zone_count":liquidity_min_zone_count},
         "signal_count":len(signals),"truncated":truncated,
         "signals":signals,"events":events,
         "warnings":[
             "Mechanical candidate, not a faithful reproduction of discretionary RFM.",
-            "FVG overlap is a simple three-candle price-gap heuristic, not an unfilled-FVG validity test.",
-            "No Volume Profile/POC confirmation or higher-timeframe alignment is included in candidate selection.",
+            "FVG detected by surviving three-candle price-gap proxy with partial mitigation; this is experimental, not validated order-flow imbalance.",
+            "Structural liquidity is described with causal confirmed pivots, EQH/EQL and completed prior UTC periods. Tolerance and zone-count threshold are experimental.",
+            "Approximate OHLCV-based POC is an optional feature, never a requirement; no 4H alignment is used to filter candidates.",
+            "This experimental generator REQUIRES pivot breakout/BOS; the user's RFM does NOT require BOS. Do not label results a faithful RFM backtest.",
             "Anchors and signals use only candles known at the decision candle close.",
             "Historical survivorship, funding, spreads and real execution remain unmodelled."
         ]
