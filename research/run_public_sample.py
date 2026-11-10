@@ -12,6 +12,7 @@ from pathlib import Path
 import httpx
 import pandas as pd
 from research.export_research import fetch_candles,run_research
+from research.pooled_walk_forward import evaluate
 
 SAMPLES=[
     ("BTC-USDT-SWAP","15m",10000),
@@ -79,6 +80,20 @@ def main():
             index["samples"].append(entry)
             print(json.dumps({"instrument":symbol,"status":entry["status"]},
                              ensure_ascii=False),flush=True)
+    try:
+        pooled=evaluate(OUT,"impulse_no_bos")
+        (OUT/"pooled_walk_forward_impulse_no_bos.json").write_text(
+            json.dumps(pooled,ensure_ascii=False,indent=2),encoding="utf-8")
+        index["pooled_ml"]={"status":pooled["walk_forward"]["status"],
+                            "labeled_trades":pooled["completed_trades"],
+                            "mean_baseline_brier":pooled["walk_forward"].get("mean_baseline_brier"),
+                            "mean_xgboost_brier":pooled["walk_forward"].get("mean_xgboost_brier"),
+                            "mean_logistic_brier":pooled["walk_forward"].get("mean_logistic_brier")}
+    except Exception as exc:
+        index["pooled_ml"]={"status":"failed",
+                            "error":type(exc).__name__+": "+str(exc)}
+        traceback.print_exc()
+    print(json.dumps({"pooled_ml":index["pooled_ml"]},ensure_ascii=False),flush=True)
     (OUT/"index.json").write_text(
         json.dumps(index,ensure_ascii=False,indent=2),encoding="utf-8")
     if not any(m.get("status")=="evaluated" for item in index["samples"]
