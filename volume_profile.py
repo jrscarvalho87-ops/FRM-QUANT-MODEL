@@ -78,6 +78,8 @@ def approximate_poc(candles, anchor_ts, asof_ts, *, bins=48,
             buckets[idx] += volume*overlap/(high-low)
 
     total_volume = sum(r[3] for r in selected)
+    if not isfinite(total_volume) or not all(isfinite(x) for x in buckets):
+        raise ValueError("Non-finite aggregated volume")
     if total_volume <= 0 or not any(buckets):
         raise ValueError("Window has zero contract volume; no POC")
     max_bucket=max(buckets)
@@ -96,11 +98,11 @@ def approximate_poc(candles, anchor_ts, asof_ts, *, bins=48,
         "unconfirmed_bars_ignored":excluded_unconfirmed,
         "bins":bins,
         "price_range_low":p_low,"price_range_high":p_high,
-        "poc_price_approx":round(poc,10),
-        "poc_bin_low":round(p_low+peak*width,10),
-        "poc_bin_high":round(p_low+(peak+1)*width,10),
+        "poc_price_approx":round(poc,14),
+        "poc_bin_low":round(p_low+peak*width,14),
+        "poc_bin_high":round(p_low+(peak+1)*width,14),
         "total_contract_volume":round(total_volume,8),
-        "profile":[{"price":round(p_low+(i+.5)*width,10),"volume_contracts":round(v,8)}
+        "profile":[{"price":round(p_low+(i+.5)*width,14),"volume_contracts":round(v,8)}
                    for i,v in enumerate(buckets)],
         "warning":"OHLCV approximation only; volume at each traded price unavailable. Not equivalent to TradingView Volume Profile.",
     }
@@ -113,9 +115,9 @@ def approximate_poc(candles, anchor_ts, asof_ts, *, bins=48,
         lower,upper=fib["entry_zone_low"],fib["entry_zone_high"]
         distance=max(lower-poc,poc-upper,0.0)
         result["gold_zone"]={
-            "lower":round(lower,10),"upper":round(upper,10),
+            "lower":round(lower,14),"upper":round(upper,14),
             "poc_inside_zone":lower <= poc <= upper,
-            "distance_from_zone_price":round(distance,10),
+            "distance_from_zone_price":round(distance,14),
             "distance_from_zone_pct_swing":round(
                 100*distance/abs(fib["zero"]-fib["hundred"]),5),
             "note":"Exact overlap only; no unapproved near-zone distance threshold. POC optional."
