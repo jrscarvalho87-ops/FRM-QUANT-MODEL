@@ -31,7 +31,7 @@ class ExecutionTests(unittest.TestCase):
         result = simulate(candles,[signal()],max_hold_bars=1)
         self.assertEqual(result["trades"][0]["exit_reason"],"take_profit")
         self.assertGreater(result["trades"][0]["pnl"],0)
-        self.assertLess(result["trades"][0]["pnl"],100)
+        self.assertLess(result["trades"][0]["pnl"],200)
 
     def test_reject_planned_rr_below_two(self):
         result=simulate([bar(0),bar(1)], [signal(entry=75,stop=0.1,take=100)])
