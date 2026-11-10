@@ -8,8 +8,11 @@ from fastapi.responses import FileResponse
 from pathlib import Path
 from data_quality import normalize_candles, gap_report
 from market_audit import audit_sample
+from history import fetch_history, INTERVAL_MS
+from universe import catalog_status, screen_window
+from execution import simulate
 
-app = FastAPI(title="RFM Quant", version="0.5.0")
+app = FastAPI(title="RFM Quant", version="0.7.0")
 OKX_BASE = "https://www.okx.com"
 WATCHLIST = ["BTC","ETH","SOL","ZEC","XRP","BNB","RENDER","AVAX","ADA","TAO","NEAR","ONDO","PUMP","CRV","LTC","UNI","SUI","LINK","ENA","AERO","PEPE","DOGE","WIF","GRAM","AAVE","ARB","WLD","VIRTUALS","INJ","DOT","WLFI"]
 BARS = {"1m","3m","5m","15m","30m","1H","2H","4H","6H","12H","1D","1Dutc"}
@@ -85,3 +88,84 @@ async def audit_symbol(symbol: str):
     raw = await okx_get("/api/v5/market/history-candles",
                         {"instId":inst_id,"bar":"15m","limit":"100"})
     return {"symbol":symbol,"instrument":inst_id,"sample":audit_sample(raw)}
+
+
+def validate_swap_and_bar(inst_id: str, bar: str):
+    if not re.fullmatch(r"[A-Z0-9]+-[A-Z0-9]+-SWAP", inst_id):
+        raise HTTPException(status_code=400, detail="Expected OKX SWAP instrument ID")
+    if bar not in INTERVAL_MS:
+        raise HTTPException(status_code=400, detail="Unsupported timeframe")
+
+
+@app.get("/api/okx/universe")
+async def universe():
+    """Current OKX instrument catalog; DOES NOT claim historical data validity."""
+    catalog = await okx_get("/api/v5/public/instruments", {"instType":"SWAP"})
+    results = catalog_status(catalog, WATCHLIST)
+    return {"count":len(results), "available_usdt":sum(bool(r["usdt_swap"]) for r in results),
+            "assets":results, "note":"Contract availability varies by region and account."}
+
+
+@app.get("/api/okx/history")
+async def history_endpoint(
+    inst_id: str = Query("BTC-USDT-SWAP", min_length=7, max_length=40),
+    bar: str = Query("4H"),
+    bars: int = Query(600, ge=1, le=2000),
+):
+    validate_swap_and_bar(inst_id, bar)
+    return await fetch_history(okx_get, inst_id, bar=bar, bars=bars)
+
+
+@app.get("/api/okx/coverage/{symbol}")
+async def coverage(
+    symbol: str,
+    bar: str = Query("4H"),
+    bars: int = Query(650, ge=100, le=2000),
+    minimum_days: float = Query(90.0, ge=1, le=365),
+):
+    symbol = symbol.upper()
+    if symbol not in WATCHLIST:
+        raise HTTPException(status_code=404, detail="Symbol not in selected universe")
+    inst_id = f"{symbol}-USDT-SWAP"
+    validate_swap_and_bar(inst_id, bar)
+    catalog = await okx_get("/api/v5/public/instruments", {"instType":"SWAP"})
+    available = {item["instId"] for item in catalog if item.get("state") == "live"}
+    if inst_id not in available:
+        return {"symbol":symbol,"instrument":inst_id,"status":"no_live_usdt_swap",
+                "warning":"Public catalog only. No historical coverage was checked."}
+    h = await fetch_history(okx_get, inst_id, bar=bar, bars=bars)
+    report = screen_window(h, minimum_days=minimum_days)
+    return {"symbol":symbol,"instrument":inst_id,"quality":report,
+            "oldest_ts":h["first_ts"],"newest_ts":h["last_ts"],
+            "pages":h["pages_requested"],"history_exhausted":h["history_exhausted"]}
+
+
+@app.get("/api/research/fibonacci-rr-check")
+async def fibonacci_rr_check():
+    """Arithmetic illustration, NOT an approved RFM anchoring convention."""
+    return {"assumption":"Entry at level, stop=0, target=100 on the same linear scale",
+            "examples":[{"entry":75,"risk":75,"reward":25,"rr":round(25/75,4)},
+                        {"entry":67,"risk":67,"reward":33,"rr":round(33/67,4)}],
+            "warning":"Both examples fail a 2:1 minimum. The user's actual fib orientation and protective stop must be confirmed before generating RFM signals."}
+
+
+@app.post("/api/research/simulate")
+async def simulate_supplied_signals(body: dict):
+    """OHLC + externally supplied signals. No order placement or invented RFM entries."""
+    candles = body.get("candles")
+    signals = body.get("signals")
+    settings = body.get("settings", {})
+    if not isinstance(candles,list) or not isinstance(signals,list) or not isinstance(settings,dict):
+        raise HTTPException(status_code=400,detail="Provide candles[], signals[] and settings{}")
+    if len(candles)>2000 or len(signals)>200:
+        raise HTTPException(status_code=413,detail="Too many candles or signals")
+    if not all(isinstance(row,dict) for row in candles+signals):
+        raise HTTPException(status_code=400,detail="Candles and signals must be objects")
+    allowed = {"initial_equity","risk_pct","fee_bps","slippage_bps",
+               "max_exposure","min_rr","interval_ms","max_hold_bars"}
+    if set(settings) - allowed:
+        raise HTTPException(status_code=400,detail="Unknown simulation setting")
+    try:
+        return simulate(candles, signals, **settings)
+    except (ValueError,TypeError,KeyError,OverflowError) as exc:
+        raise HTTPException(status_code=400,detail="Invalid simulation inputs: " + str(exc)) from exc
