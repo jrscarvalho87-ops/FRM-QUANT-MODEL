@@ -4,6 +4,11 @@ on:
     branches: [main]
     paths:
       - research/audit_geometry_snapshot.py
+      - research/export_research.py
+      - rfm_impulse_candidates.py
+      - swing_geometry.py
+      - swing_liquidity_context.py
+      - structural_liquidity.py
   workflow_dispatch:
 permissions:
   contents: read
