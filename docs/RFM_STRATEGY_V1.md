@@ -48,3 +48,9 @@
 - Só depois comparar variantes e avaliar robustez entre ativos e regimes.
 
 **Sem resultados de backtest real apresentados neste documento.** O pipeline está preparado; a amostra e as regras finais precisam de ser validadas.
+
+## Clarificação do utilizador — prioridades do setup (2026-11-10)
+**Elementos essenciais:** (1) Fibonacci com Gold Zone 67–75%, (2) FVG que coincide/sobrepõe a Gold Zone, (3) liquidez significativa. A definição quantitativa de «bastante liquidez» ainda precisa de ser fixada; NÃO presumir que um sweep é obrigatório, nem equiparar volume agregado a liquidez executável.
+**BOS:** opcional, mas importante como confirmação estrutural.
+**Volume Profile:** POC dentro da Gold Zone é confluência positiva opcional; não bloquear setups sem POC na zona. O perfil é ancorado na vela inicial da Fibonacci e prolongado até à última vela fechada da decisão. Com OHLCV, o POC é apenas aproximação, não POC tick-level.
+**Implicação para o pipeline:** primeiro filtrar candidatos por Fibonacci + FVG na Gold Zone + métrica de liquidez ainda a acordar; depois registar BOS, POC e outras confluências como features. XGBoost compara resultados históricos sem substituir as regras. A implementação atual em `rfm_candidates.py` ainda NÃO reflete estas prioridades: FVG está opcional e liquidez não é filtro. Não publicar resultados como backtest fiel até corrigir e validar estas condições.
