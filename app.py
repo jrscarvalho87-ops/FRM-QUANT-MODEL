@@ -185,6 +185,6 @@ async def structure_endpoint(
     history_data = await fetch_history(okx_get,inst_id,bar=bar,bars=bars)
     if history_data["missing_intervals"] or history_data["rejected"]["malformed"]:
         raise HTTPException(status_code=422,detail="Structure requires continuous valid candles")
-    result=scan_structure(history_data["candles"],pivot_span=pivot_span,max_events=30)
+    result=scan_structure(history_data["candles"],pivot_span=pivot_span,max_events=30,interval_ms=INTERVAL_MS[bar])
     return {"instrument":inst_id,"bar":bar,"history_coverage_days":history_data["coverage_days"],
             **result}
