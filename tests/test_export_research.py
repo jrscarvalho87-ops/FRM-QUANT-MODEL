@@ -52,6 +52,24 @@ class HistoricalPaginationTests(unittest.TestCase):
         with self.assertRaisesRegex(ValueError,"gap"):
             fetch_candles(client,"https://example.com","BTC-USDT-SWAP","15m",2100)
 
+    def test_exact_pinned_cutoff_replays_older_window(self):
+        bars=self.candles(2600)
+        client=FakeClient(bars)
+        rows,meta=fetch_candles(
+            client,"https://example.com","BTC-USDT-SWAP","15m",1000,
+            last_bar_ts=2000*MS)
+        self.assertEqual(len(rows),1000)
+        self.assertEqual(rows[-1]["ts"],2000*MS)
+        self.assertEqual(rows[0]["ts"],1001*MS)
+        self.assertEqual(meta["pinned_last_bar_ts"],2000*MS)
+
+    def test_pinned_cutoff_refuses_earlier_or_unavailable_end(self):
+        bars=self.candles(2100)
+        client=FakeClient(bars)
+        with self.assertRaisesRegex(ValueError,"Exact pinned"):
+            fetch_candles(client,"https://example.com","BTC-USDT-SWAP","15m",
+                          1000,last_bar_ts=3000*MS)
+
     def test_unconfirmed_candle_rejected(self):
         bars=self.candles(2100)
         bars[-10]["confirmed"]=False
