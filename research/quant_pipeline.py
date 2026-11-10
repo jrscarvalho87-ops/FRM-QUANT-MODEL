@@ -10,7 +10,8 @@ FEATURES=["side_long","swing_fraction","fvg_in_gold_zone","entry_level",
           "hour_utc","range_pct_12","return_12","volume_ratio_12"]
 # Added only when genuinely present for every labeled event; missing POC is NOT False.
 OPTIONAL_FEATURES=["liquidity_zone_count","liquidity_bsl_count","liquidity_ssl_count",
-                   "liquidity_eqh_pairs","liquidity_eql_pairs","poc_in_gold_zone_proxy"]
+                   "liquidity_eqh_pairs","liquidity_eql_pairs","liquidity_structure_zone_count",
+                   "structure_break_close_context","poc_in_gold_zone_proxy"]
 
 def prepare_dataset(candles:pd.DataFrame,events:pd.DataFrame,trades:pd.DataFrame)->pd.DataFrame:
     required=[("candles",candles,{"ts","open","high","low","close","volume_contracts"}),
@@ -48,7 +49,7 @@ def prepare_dataset(candles:pd.DataFrame,events:pd.DataFrame,trades:pd.DataFrame
     df["hour_utc"]=pd.to_datetime(df.signal_ts,unit="ms",utc=True).dt.hour
     for col in OPTIONAL_FEATURES:
         if col in df:
-            if col=="poc_in_gold_zone_proxy":
+            if col in ("poc_in_gold_zone_proxy","structure_break_close_context"):
                 df[col]=df[col].map({True:1,False:0,1:1,0:0})
             else:
                 df[col]=pd.to_numeric(df[col],errors="coerce")
