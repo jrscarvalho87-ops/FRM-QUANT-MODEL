@@ -27,7 +27,7 @@ Known intent:
 - Bearish: 100% at the upper swing extreme, 0% at the lower swing extreme. Sell on a retracement into 67–75%.
 - Protective stop at/near 100% and target at/near 0%; the screenshots do not establish whether a buffer beyond 100% is mandatory.
 - Reward/risk on a normalized 0-to-100 swing: entry 67 => reward 67, risk 33 => 2.0303R; entry 75 => reward 75, risk 25 => 3R. Fees, slippage, buffers and execution price can reduce these ratios.
-- FVG/imbalance overlaps the retracement zone in the examples; BOS, CHoCH and liquidity sweeps are shown as context. **Whether BOS, FVG and liquidity sweep are individually mandatory or optional remains to be confirmed.**
+- FVG/imbalance overlaps the retracement zone in the examples; BOS, CHoCH and liquidity sweeps are shown as context. User clarified on 2026-11-10 that BOS, CHoCH and liquidity sweep are NOT individually mandatory. Some discretionary entries use FVG within Gold Zone plus HTF alignment alone. CHoCH can replace BOS. Volume Profile is also consulted, but the exact signal rule (POC/VAH/VAL/HVN/LVN) is not specified. Do not treat it as mandatory until confirmed.
 - The precise swing-selection/anchor algorithm and whether the first touch of 67 or 75 is used remain unresolved. These are necessary to prevent discretionary cherry-picking and future leakage.
 
 ## Data restrictions and audit
@@ -48,3 +48,9 @@ Known intent:
 6. Add statistical reports, reject weak assets, and run simulated paper-trading only.
 
 The app is a research tool, not a broker or financial return generator.
+
+
+## Confirmation logic clarification (2026-11-10)
+The RFM is discretionary in its current form. The user sometimes trades with just a FVG inside the Gold Zone and HTF alignment; liquidity sweep is not always inspected, and CHoCH may replace BOS. Volume Profile is consulted, but no specific mechanical rule has been given.
+
+**Research design:** record binary/typed features separately: `fvg_in_gold_zone`, `bos_direction`, `choch_direction`, `liquidity_sweep`, `alignment`, `volume_profile_context`. Do not conflate a missing condition with a failed setup. Define candidate families for stratified testing (e.g. Gold Zone + FVG + alignment; Gold Zone + FVG + alignment + CHoCH; with/without sweep) and compare their out-of-sample results after adequate sample sizes. Avoid fitting weights to the same data used for evaluation. The rules for choosing Fib anchors, FVG validity and exact volume-profile confirmation remain to be specified before producing automatic trade signals.
