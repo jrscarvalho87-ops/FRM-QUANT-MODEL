@@ -4,8 +4,10 @@ import re
 
 import httpx
 from fastapi import FastAPI, HTTPException, Query
+from fastapi.responses import FileResponse
+from pathlib import Path
 
-app = FastAPI(title="RFM Quant", version="0.2.0")
+app = FastAPI(title="RFM Quant", version="0.3.0")
 OKX_BASE = "https://www.okx.com"
 WATCHLIST = ["BTC","ETH","SOL","BNB","ZEC","HYPE","XRP","ENA","TAO","NEAR","RENDER","ONDO","PUMP","INJ","AVAX","ADA","PEPE","SUI","LINK","SEI","DOGE","BCH","LTC","TRX","WLD","AAVE","UNI","XLM","ARB","OP"]
 BARS = {"1m","3m","5m","15m","30m","1H","2H","4H","6H","12H","1D","1Dutc"}
@@ -24,7 +26,7 @@ async def okx_get(path: str, params: dict):
 
 @app.get("/")
 async def home():
-    return {"project":"RFM Quant","version":"0.2.0","mode":"research_only","docs":"/docs"}
+    return FileResponse(Path(__file__).resolve().parent / "static" / "index.html")
 
 @app.get("/health")
 async def health():
