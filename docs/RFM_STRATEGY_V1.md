@@ -1,6 +1,6 @@
 # RFM — Registo de estratégia para investigação (versão 1.0)
 
-**Estado: parcialmente confirmada.** Este documento distingue regras descritas pelo utilizador de decisões técnicas ainda por aprovar. Não substituir a estratégia original por uma estratégia inventada.
+**Estado: componentes essenciais confirmados; regras mecânicas de medição ainda parcialmente em aberto.** Este documento distingue regras descritas pelo utilizador de decisões técnicas ainda por aprovar. Não substituir a estratégia original por uma estratégia inventada.
 
 ## Fluxo
 **Input**: OHLCV de contratos perpetual, preços e timestamps, timeframe de execução 15m, contexto 4H; histórico validado, sem velas futuras.
@@ -19,7 +19,7 @@
 | Gold Zone | Retração 67–75% | Confirmado |
 | SL | Na região do 100% | Confirmado, buffer exato pendente |
 | TP | Na região do 0% | Confirmado, buffer exato pendente |
-| FVG / imbalance | Confluência frequentemente observada na Gold Zone | Confirmado como confluência, não filtro universal |
+| FVG / imbalance | **Essencial: FVG deve sobrepor a Gold Zone 67–75%** | Confirmado |
 | BOS ou CHoCH | Informação estrutural; CHoCH pode substituir BOS | Confirmado como contexto opcional |
 | Liquidity sweep | Confluência opcional | Confirmado |
 | 4H premium / discount | Informação de alinhamento | Confirmado; regra de decisão ainda não objetiva |
@@ -34,7 +34,7 @@
 ## O que ainda tem de ser definido antes do backtest fiel
 1. Critério exato para selecionar as duas âncoras da Fibonacci sem olhar para o futuro.
 2. Se se entra no primeiro toque da Gold Zone, no 67%, no 75%, ou mediante confirmação.
-3. Se o FVG é necessário em alguma família de setups e quando fica mitigado/inválido.
+3. Quando um FVG sobreposto à Gold Zone é considerado mitigado/inválido; a presença do FVG é essencial.
 4. Condições objetivas para aceitar/rejeitar setups no contexto 4H.
 5. Se e como o POC influencia a decisão, incluindo tolerância de proximidade.
 6. Buffers de stop/TP e tratamento de operações sobrepostas.
@@ -70,11 +70,3 @@
 ## Clarificação adicional da liquidez (2026-11-10)
 O utilizador confirmou que o critério é a presença de **zonas relevantes de liquidez na estrutura do movimento**. Não é obrigatório estarem próximas da Gold Zone nem do take-profit. No modelo, registar localização, tipo, confirmação temporal e contexto estrutural das zonas; não impor restrições de distância sem validação adicional.
 
-## Referência educativa — transcrição de vídeo enviada pelo utilizador (2026-11-10)
-Vídeo YouTube https://youtu.be/QEhVZfh_UBw; transcrição fornecida pelo utilizador. O utilizador afirma que a sua RFM é muito semelhante ao método demonstrado, **não necessariamente idêntica**.
-
-**Regras descritas no vídeo:** execução 15m e contexto 4H; checklist de quatro fatores (HTF premium/discount, BOS, liquidity sweep, imbalance/FVG); exemplo de trade com 3/4 fatores; entrada Fibonacci preferencial a 75% para RR teórico 3:1, alternativa 71% para mais preenchimentos e RR ~2.45:1; stop no extremo de 100%, alvo no extremo de 0%; POC do Volume Profile perto do nível Fibonacci como confluência extra, não requisito obrigatório. O vídeo apresenta apenas exemplos escolhidos de operações vencedoras, não um histórico completo de backtesting.
-
-**Diferenças face à RFM confirmada:** a RFM do utilizador exige FVG na Gold Zone e zonas de liquidez estrutural relevantes (EQH/EQL, BSL/SSL, máximos/mínimos anteriores); não exige sweep, BOS, HTF alinhado ou POC como condições universais. A Gold Zone atual é 67–75%; o nível 71% do vídeo deve ser tratado como variante de pesquisa, não como regra aprovada. O score 25% por fator do vídeo é uma heurística, não probabilidade calibrada nem edge comprovada.
-
-**Investigação futura:** comparar entradas 67/71/75 com custos e fill rate; comparar candidatos com/sem BOS, sweep, alinhamento e POC, sem data snooping; medir amostras completas, não só exemplos vencedores. **Não confundir promessas promocionais do vídeo com evidência estatística.**
