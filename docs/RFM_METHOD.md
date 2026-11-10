@@ -60,3 +60,11 @@ The user explicitly confirmed that only **POC** is used, never VAH or VAL. Treat
 
 ## POC range rule confirmed (2026-11-10)
 The user uses a manually anchored volume profile beginning at the candle where the Fibonacci is anchored, extending to the current analysis candle. For research, treat this as a dynamically extending fixed-range profile: start at the Fibonacci anchor candle, end at the most recently CLOSED candle as of the signal decision. Never use later candles when calculating historical POC. POC is optional confluence, not a mandatory entry criterion; VAH/VAL are not used. Exact volume-at-price requires granular data or a documented approximation, and binning/price proximity rules are not yet defined. The anchor-selection rule is also not yet fully mechanical.
+
+## v0.9 implementation: POC lab and additional market events
+- `/poc` is a browser-based, manual Fib anchor and historical decision-time lab. It loads confirmed OKX candles with date selection, long/short 0/100 levels, optional FVG bounds and optional user-provided 4H context.
+- `POST /api/research/poc` spreads each confirmed candle's contract volume **uniformly** across its price range to form a discretized OHLCV proxy. This is **not** the real tick-level Volume Profile/TradingView POC.
+- Profile window is exactly `anchor_ts` through `asof_ts` (both are candle OPEN timestamps). The output includes `known_after_close_ts`. Future bars are removed before binning. Gaps and unconfirmed endpoint candles are refused.
+- POC exact-overlap with Gold Zone is a separate feature; no invented proximity threshold. FVG bounds supplied manually are not certified historical FVGs.
+- Experimental SSL and BSL sweeps: wick beyond a previously confirmed swing, then candle close back across the swing level. One sweep per confirmed pivot. CHoCH candidates: confirmed direction break opposite to previous detected break. Both are **heuristics**, not mandatory entries or proof of edge.
+- Automated RFM pivot selection remains unapproved; the manual anchors intentionally avoid claiming discretionary chart interpretations are fully objective.
