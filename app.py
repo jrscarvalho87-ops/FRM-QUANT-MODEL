@@ -12,6 +12,7 @@ from history import fetch_history, INTERVAL_MS
 from universe import catalog_status, screen_window
 from execution import simulate
 from structure import scan_structure
+from fibonacci import levels as fib_levels
 
 app = FastAPI(title="RFM Quant", version="0.8.0")
 OKX_BASE = "https://www.okx.com"
@@ -188,3 +189,16 @@ async def structure_endpoint(
     result=scan_structure(history_data["candles"],pivot_span=pivot_span,max_events=30,interval_ms=INTERVAL_MS[bar])
     return {"instrument":inst_id,"bar":bar,"history_coverage_days":history_data["coverage_days"],
             **result}
+
+
+@app.get("/api/research/fibonacci-levels")
+async def fibonacci_levels(
+    zero: float = Query(...,gt=0),
+    hundred: float = Query(...,gt=0),
+    side: str = Query(...,pattern="^(long|short)$"),
+):
+    """Compute chart levels only. Does not choose anchors or generate signals."""
+    try:
+        return fib_levels(zero,hundred,side)
+    except ValueError as exc:
+        raise HTTPException(status_code=400,detail=str(exc)) from exc
