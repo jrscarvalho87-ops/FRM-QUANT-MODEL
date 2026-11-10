@@ -10,7 +10,7 @@ from data_quality import normalize_candles, gap_report
 
 app = FastAPI(title="RFM Quant", version="0.4.0")
 OKX_BASE = "https://www.okx.com"
-WATCHLIST = ["BTC","ETH","SOL","BNB","ZEC","HYPE","XRP","ENA","TAO","NEAR","RENDER","ONDO","PUMP","INJ","AVAX","ADA","PEPE","SUI","LINK","SEI","DOGE","BCH","LTC","TRX","WLD","AAVE","UNI","XLM","ARB","OP"]
+WATCHLIST = ["BTC","ETH","SOL","ZEC","XRP","BNB","RENDER","AVAX","ADA","TAO","NEAR","ONDO","PUMP","CRV","LTC","UNI","SUI","LINK","ENA","AERO","PEPE","DOGE","WIF","GRAM","AAVE","ARB","WLD","VIRTUALS","INJ","DOT","WLFI"]
 BARS = {"1m","3m","5m","15m","30m","1H","2H","4H","6H","12H","1D","1Dutc"}
 
 async def okx_get(path: str, params: dict):
