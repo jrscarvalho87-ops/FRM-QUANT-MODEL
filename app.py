@@ -7,8 +7,9 @@ from fastapi import FastAPI, HTTPException, Query
 from fastapi.responses import FileResponse
 from pathlib import Path
 from data_quality import normalize_candles, gap_report
+from market_audit import audit_sample
 
-app = FastAPI(title="RFM Quant", version="0.4.0")
+app = FastAPI(title="RFM Quant", version="0.5.0")
 OKX_BASE = "https://www.okx.com"
 WATCHLIST = ["BTC","ETH","SOL","ZEC","XRP","BNB","RENDER","AVAX","ADA","TAO","NEAR","ONDO","PUMP","CRV","LTC","UNI","SUI","LINK","ENA","AERO","PEPE","DOGE","WIF","GRAM","AAVE","ARB","WLD","VIRTUALS","INJ","DOT","WLFI"]
 BARS = {"1m","3m","5m","15m","30m","1H","2H","4H","6H","12H","1D","1Dutc"}
@@ -68,3 +69,19 @@ async def candles(
             "newest_ts":rows[-1]["ts"] if rows else None,
             "rejected":rejected,"missing_intervals":gap_report(rows,interval_ms),
             "note":"Validated confirmed candles only. No interpolation; gap counts are within this page only. No backtest results."}
+
+@app.get("/api/okx/audit/{symbol}")
+async def audit_symbol(symbol: str):
+    """Audit a recent 100-bar 15m sample; not full historical certification."""
+    symbol = symbol.upper()
+    if symbol not in WATCHLIST:
+        raise HTTPException(status_code=404, detail="Symbol not on watchlist")
+    instruments = await okx_get("/api/v5/public/instruments",{"instType":"SWAP"})
+    ids = {i.get("instId") for i in instruments if i.get("state") == "live"}
+    inst_id = f"{symbol}-USDT-SWAP"
+    if inst_id not in ids:
+        return {"symbol":symbol,"instrument":inst_id,"status":"unavailable",
+                "reason":"No live USDT SWAP contract in OKX public instrument catalog"}
+    raw = await okx_get("/api/v5/market/history-candles",
+                        {"instId":inst_id,"bar":"15m","limit":"100"})
+    return {"symbol":symbol,"instrument":inst_id,"sample":audit_sample(raw)}
