@@ -20,12 +20,12 @@ def generate_candidates(candles, *, pivot_span=3, expiry_bars=8,
                         max_signals=200, liquidity_min_zone_count=0):
     if not (2 <= pivot_span <= 10 and 1 <= expiry_bars <= 96
             and entry_level in (67,75) and 0 <= min_swing_fraction <= .25
-            and interval_ms > 0 and 1 <= max_signals <= 200
+            and interval_ms > 0 and 1 <= max_signals <= 5000
             and 0 <= liquidity_min_zone_count <= 50):
         raise ValueError("Invalid candidate generator settings")
     bars=list(candles)
-    if len(bars)>2000:
-        raise ValueError("At most 2000 candles")
+    if len(bars)>20000:
+        raise ValueError("At most 20000 candles in offline research")
     times=[int(b["ts"]) for b in bars]
     if times!=sorted(set(times)):
         raise ValueError("Candles must be unique and chronological")
