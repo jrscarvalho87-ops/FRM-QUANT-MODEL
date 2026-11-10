@@ -52,6 +52,19 @@ class StructuralLiquidityTests(unittest.TestCase):
         self.assertTrue(all(z["known_after_close_ts"]<=bars[40]["ts"]+MS
                             for z in a["zones"]))
 
+    def test_unbreached_zone_flags_are_causal_and_bounded(self):
+        bars=self.bars()
+        a=structural_liquidity(bars,200,pivot_span=3)
+        self.assertGreaterEqual(a["unbreached_zone_count"],0)
+        self.assertLessEqual(a["unbreached_zone_count"],a["zone_count"])
+        self.assertTrue(all(isinstance(z["breached_after_confirmation"],bool)
+                            for z in a["zones"]))
+        # A later spike cannot change whether a level was breached at 200.
+        other=copy.deepcopy(bars)
+        other[201]["high"]=1e9
+        other[201]["low"]=1e-9
+        self.assertEqual(a,structural_liquidity(other,200,pivot_span=3))
+
     def test_warmup(self):
         r=structural_liquidity(self.bars(6),5)
         self.assertEqual(r["status"],"warmup")
