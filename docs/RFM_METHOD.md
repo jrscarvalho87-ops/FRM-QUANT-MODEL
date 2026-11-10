@@ -22,11 +22,13 @@ Known intent:
 5. Entry is intended around Fibonacci 67% or 75%, with the imbalance/FVG overlapping.
 6. Stop and take profit on every trade; planned risk/reward at least 2:1.
 
-### Critical arithmetic to resolve
-If 0, 67, 75, 100 are evenly spaced levels along one linear Fibonacci axis:
-- Entry 75, TP 100, SL 0: reward 25, risk 75 => 0.333R.
-- Entry 67, TP 100, SL 0: reward 33, risk 67 => 0.493R.
-This **is not 3R or 2R**. The actual Fib direction/anchor and SL definition must be reconciled before releasing RFM auto-signal backtests. No numbers should be manufactured by violating that rule.
+### Fibonacci orientation confirmed from user screenshots (2026-11-10)
+- Bullish: 0% at the upper swing extreme, 100% at the lower swing extreme. Buy on a retracement into 67–75%.
+- Bearish: 100% at the upper swing extreme, 0% at the lower swing extreme. Sell on a retracement into 67–75%.
+- Protective stop at/near 100% and target at/near 0%; the screenshots do not establish whether a buffer beyond 100% is mandatory.
+- Reward/risk on a normalized 0-to-100 swing: entry 67 => reward 67, risk 33 => 2.0303R; entry 75 => reward 75, risk 25 => 3R. Fees, slippage, buffers and execution price can reduce these ratios.
+- FVG/imbalance overlaps the retracement zone in the examples; BOS, CHoCH and liquidity sweeps are shown as context. **Whether BOS, FVG and liquidity sweep are individually mandatory or optional remains to be confirmed.**
+- The precise swing-selection/anchor algorithm and whether the first touch of 67 or 75 is used remain unresolved. These are necessary to prevent discretionary cherry-picking and future leakage.
 
 ## Data restrictions and audit
 - Contract visibility is not proof of regional account eligibility.
