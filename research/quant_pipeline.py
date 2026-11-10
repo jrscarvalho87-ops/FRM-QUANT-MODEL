@@ -10,7 +10,9 @@ FEATURES=["side_long","swing_fraction","fvg_in_gold_zone","entry_level",
           "hour_utc","range_pct_12","return_12","volume_ratio_12"]
 # Added only when genuinely present for every labeled event; missing POC is NOT False.
 OPTIONAL_FEATURES=["liquidity_zone_count","liquidity_bsl_count","liquidity_ssl_count",
-                   "liquidity_eqh_pairs","liquidity_eql_pairs","liquidity_structure_zone_count","htf_4h_fraction",
+                   "liquidity_eqh_pairs","liquidity_eql_pairs","liquidity_structure_zone_count",
+                   "liquidity_unbreached_zone_count",
+                   "liquidity_unbreached_in_structure_count","htf_4h_fraction",
                    "structure_break_close_context","poc_in_gold_zone_proxy",
                    "asset_btc","asset_eth","asset_sol"]
 
