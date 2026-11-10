@@ -146,10 +146,10 @@ async def coverage(
 @app.get("/api/research/fibonacci-rr-check")
 async def fibonacci_rr_check():
     """Arithmetic illustration of user-confirmed RFM orientation (before costs)."""
-    return {"assumption":"Entry at level, stop=0, target=100 on the same linear scale",
-            "examples":[{"entry":75,"risk":75,"reward":25,"rr":round(25/75,4)},
-                        {"entry":67,"risk":67,"reward":33,"rr":round(33/67,4)}],
-            "warning":"Both examples fail a 2:1 minimum. The user's actual fib orientation and protective stop must be confirmed before generating RFM signals."}
+    return {"assumption":"RFM: 0% is target-side, 100% is stop-side; 67–75% are entry retracement levels.",
+            "examples":[{"entry":75,"risk":25,"reward":75,"rr":3.0},
+                        {"entry":67,"risk":33,"reward":67,"rr":round(67/33,4)}],
+            "warning":"Theoretical RR before fees, slippage and any buffer beyond the 100% level. No algorithmic swing anchoring approved yet."}
 
 
 @app.post("/api/research/simulate")
