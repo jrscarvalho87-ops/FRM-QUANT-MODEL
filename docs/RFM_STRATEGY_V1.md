@@ -54,3 +54,15 @@
 **BOS:** opcional, mas importante como confirmação estrutural.
 **Volume Profile:** POC dentro da Gold Zone é confluência positiva opcional; não bloquear setups sem POC na zona. O perfil é ancorado na vela inicial da Fibonacci e prolongado até à última vela fechada da decisão. Com OHLCV, o POC é apenas aproximação, não POC tick-level.
 **Implicação para o pipeline:** primeiro filtrar candidatos por Fibonacci + FVG na Gold Zone + métrica de liquidez ainda a acordar; depois registar BOS, POC e outras confluências como features. XGBoost compara resultados históricos sem substituir as regras. A implementação atual em `rfm_candidates.py` ainda NÃO reflete estas prioridades: FVG está opcional e liquidez não é filtro. Não publicar resultados como backtest fiel até corrigir e validar estas condições.
+
+## Liquidez — definição confirmada pelo utilizador (2026-11-10)
+«Bastante liquidez» refere-se **principalmente a zonas de liquidez no gráfico**, incluindo **EQH/EQL**, **BSL/SSL** e **máximos/mínimos anteriores** (por exemplo, anteriores ao dia/semana ou pivôs de estrutura). Não significa, por defeito, volume de negociação elevado e **não exige obrigatoriamente um liquidity sweep**.
+
+### Tradução quantitativa proposta, ainda por validar
+1. Detetar máximos/mínimos anteriores **já conhecidos na vela do sinal**; nunca usar pivôs cuja confirmação só acontece depois.
+2. Identificar EQH/EQL quando dois ou mais pivôs confirmados estão suficientemente próximos, usando tolerância normalizada por ATR (valor da tolerância ainda por aprovar).
+3. Identificar BSL sobre máximos confirmados e SSL sob mínimos confirmados; mapear distância destas zonas à Gold Zone e ao preço de entrada.
+4. Construir uma medida transparente de concentração/proximidade de zonas de liquidez. O limiar para considerar «bastante» liquidez e a posição desejada da liquidez relativamente à entrada/TP/SL **ainda não foram acordados**.
+5. Liquidity sweep é confluência adicional possível, **não requisito universal**.
+
+**Regra de segurança para o backtest:** não tratar um score arbitrário de liquidez como regra aprovada. Antes de avaliar a rentabilidade, fixar tolerâncias, janelas e o limiar de aceitação com exemplos anotados pelo utilizador.
