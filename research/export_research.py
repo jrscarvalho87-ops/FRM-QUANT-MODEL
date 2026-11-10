@@ -24,19 +24,36 @@ from research.robustness import block_bootstrap_r
 from history import INTERVAL_MS
 
 
-def fetch_candles(client, base_url, instrument, bar, target):
-    """Page backwards without filling gaps or pretending exhaustion is coverage."""
+def fetch_candles(client, base_url, instrument, bar, target, *, last_bar_ts=None):
+    """Page backwards with optional PINNED historical end, no gap interpolation.
+
+    last_bar_ts explicitly pins the last expected confirmed candle. Historical
+    snapshots can therefore be replayed at the same cutoff instead of
+    accidentally comparing different market windows.
+    """
     if not 100 <= target <= 20000 or bar not in ("15m", "1H", "4H"):
         raise ValueError("Invalid research coverage")
     base = base_url.rstrip("/")
-    response = client.get(base + "/api/okx/history", params={
-        "inst_id":instrument, "bar":bar, "bars":min(2000,target)})
+    if last_bar_ts is None:
+        response = client.get(base + "/api/okx/history", params={
+            "inst_id":instrument, "bar":bar, "bars":min(2000,target)})
+    else:
+        from history import INTERVAL_MS
+        if (not isinstance(last_bar_ts,int) or last_bar_ts<=0 or
+                last_bar_ts%INTERVAL_MS[bar]):
+            raise ValueError("last_bar_ts must be a candle-aligned positive integer")
+        response = client.get(base + "/api/okx/candles", params={
+            "inst_id":instrument, "bar":bar,"limit":100,
+            "after":last_bar_ts+INTERVAL_MS[bar]})
     response.raise_for_status()
     first = response.json()
     if first.get("missing_intervals") or first.get("rejected",{}).get("malformed"):
         raise ValueError("Initial historical page contains gaps or malformed candles")
     unique = {int(b["ts"]):b for b in first["candles"]}
-    pages = int(first.get("pages_requested",0))
+    if last_bar_ts is not None and (
+            not unique or max(unique)!=last_bar_ts):
+        raise ValueError("Exact pinned historical cutoff is unavailable; refusing a mismatched sample")
+    pages = int(first.get("pages_requested",1))
     exhausted = bool(first.get("history_exhausted",False))
     while len(unique) < target and unique and not exhausted:
         oldest = min(unique)
@@ -69,6 +86,7 @@ def fetch_candles(client, base_url, instrument, bar, target):
                   "exhausted_before_target":len(bars)<target,
                   "pages_requested":pages,
                   "first_ts":int(bars[0]["ts"]), "last_ts":int(bars[-1]["ts"]),
+                  "pinned_last_bar_ts":last_bar_ts,
                   "retrieved_utc":datetime.now(timezone.utc).isoformat()}
 
 
