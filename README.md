@@ -13,6 +13,7 @@ Research-only crypto market data and backtest infrastructure. Developed for obje
 - Find experimental BOS, three-candle FVG, SSL/BSL sweeps and CHoCH candidates, using only confirmed swings and candle closes.
 - Select the Fibonacci starting candle and any historical as-of closed candle to calculate a dynamic fixed-range **POC proxy** (uniform OHLCV volume spread across high/low price bins). Users can enter confirmed bullish/bearish 0/100 anchors, see 67–75% Gold Zone and optional overlap with manually supplied FVG. This is **not** a true tick-based Volume Profile.
 - Supply explicit closed-candle signals and candles to a conservative research execution simulator with commissions, slippage and risk sizing.
+- From the POC laboratory, perform a **single manual scenario replay** from a chosen historical signal candle with Fib 67 or 75 as limit entry, 100 as stop and 0 as target. This is not an auto-signal backtest and may have hindsight bias in manually chosen Fibonacci anchors.
 
 **No RFM auto-trade signals yet.** The user confirmed the Fibonacci orientation with bullish and bearish screenshots: entry 67–75%, protective side at 100%, target side at 0%. Theoretical RR is 2.03:1 at 67% and 3:1 at 75% before fees and stop buffers. See [methodology](docs/RFM_METHOD.md).
 
@@ -43,3 +44,4 @@ The simulator **does not** place orders. Funding fees, market depth, liquidation
 
 ## Deployment
 The Render service is configured for Python using `pip install -r requirements.txt` and `uvicorn app:app --host 0.0.0.0 --port $PORT`. See [render.yaml](render.yaml). Code commits to GitHub do not themselves prove a deploy completed; check deployment status on Render.
+\n## Manual replay assumptions (v0.10 beta)\nA single hypothetical order may be simulated after a user-selected historical candle. Default research parameters: 10,000 USDT fictitious equity, 1% intended risk, capped at 1x notional, fee 5 bps and slippage 2 bps per side, with 2R minimum before fees. The engine uses conservative stop-first resolution for candles touching both TP and SL, and does not assert trades can be filled at quoted prices. The scenario is not proof of a strategy edge.\n
