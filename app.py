@@ -17,7 +17,7 @@ from volume_profile import approximate_poc
 from rfm_candidates import generate_candidates
 from research_stats import bootstrap_r_multiples
 
-app = FastAPI(title="RFM Quant", version="0.11.0")
+app = FastAPI(title="RFM Quant", version="0.12.0")
 OKX_BASE = "https://www.okx.com"
 WATCHLIST = ["BTC","ETH","SOL","ZEC","XRP","BNB","RENDER","AVAX","ADA","TAO","NEAR","ONDO","PUMP","CRV","LTC","UNI","SUI","LINK","ENA","AERO","PEPE","DOGE","WIF","GRAM","AAVE","ARB","WLD","VIRTUALS","INJ","DOT","WLFI"]
 BARS = {"1m","3m","5m","15m","30m","1H","2H","4H","6H","12H","1D","1Dutc"}
