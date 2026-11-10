@@ -1,25 +1,128 @@
 <!doctype html>
-<html lang="pt-PT"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
-<title>RFM Quant | Research Dashboard</title>
+<html lang="pt-PT">
+<head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>RFM Quant — Painel de investigação</title>
 <style>
-:root{color-scheme:dark;font-family:Inter,system-ui,-apple-system,Segoe UI,sans-serif;background:#0b101a;color:#e7edf7}*{box-sizing:border-box}body{margin:0}.shell{max-width:1200px;margin:auto;padding:30px 20px}.top{display:flex;align-items:center;justify-content:space-between;gap:16px;flex-wrap:wrap}.logo{font-size:23px;font-weight:800;letter-spacing:-.5px}.logo b{color:#7c9fff}.pill{font-size:12px;color:#a7d7bd;background:#163329;border:1px solid #2d6348;padding:7px 12px;border-radius:99px}h1{font-size:31px;margin:35px 0 8px}p,.muted{color:#93a4bb}.grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:16px;margin:24px 0}.card{border:1px solid #253246;background:#121c2b;border-radius:16px;padding:22px}.card small{color:#93a4bb}.value{font-size:30px;font-weight:750;margin:10px 0}.toolbar{display:flex;gap:12px;align-items:center;flex-wrap:wrap;margin:20px 0}button,select{border:1px solid #36465c;background:#1a2b43;color:#e7edf7;border-radius:9px;padding:10px 13px;font:inherit;cursor:pointer}button:hover{background:#28405f}select{min-width:180px}.table-wrap{overflow:auto}table{width:100%;border-collapse:collapse;text-align:left}th,td{padding:13px;border-bottom:1px solid #263448}th{font-size:12px;color:#9eafc5}td{font-size:14px}.status{font-size:12px;color:#a8bbd4}.error{color:#ffacac}.footer{font-size:12px;margin:28px 0;color:#8192a9}@media(max-width:700px){.grid{grid-template-columns:1fr}h1{font-size:25px}}
-</style></head><body><div class="shell"><div class="top"><div class="logo">RFM <b>Quant</b></div><span class="pill">RESEARCH MODE · Sem ordens reais</span></div>
-<h1>Mercados de criptomoedas</h1><p>Painel inicial de dados públicos da OKX. Os resultados da estratégia ainda não estão disponíveis.</p>
-<div class="grid"><div class="card"><small>Ativos na watchlist</small><div id="watchcount" class="value">—</div><small>Lista configurada</small></div><div class="card"><small>Contratos SWAP encontrados</small><div id="swapcount" class="value">—</div><small>Consulta em tempo real à OKX</small></div><div class="card"><small>Estado do serviço</small><div id="health" class="value">A verificar</div><small id="updated">A aguardar resposta</small></div></div>
-<div class="card"><div class="top"><div><h2 style="margin:0 0 6px">Explorador de candles</h2><div class="muted">OHLCV histórico · sem sinais nem previsões</div></div><button id="reload">Atualizar dados</button></div>
-<div class="toolbar"><label for="symbol">Contrato</label><select id="symbol"><option value="BTC-USDT-SWAP">BTC-USDT-SWAP</option></select><label for="bar">Timeframe</label><select id="bar"><option>15m</option><option>1H</option><option>4H</option><option>1D</option></select></div>
-<div class="toolbar"><button id="audit">Auditar qualidade do gráfico</button><span id="audit-result" class="status">Auditoria ainda não executada</span></div><div id="notice" class="status" role="status">A carregar…</div><div class="table-wrap"><table><thead><tr><th>Data (UTC)</th><th>Open</th><th>High</th><th>Low</th><th>Close</th><th>Confirmada</th></tr></thead><tbody id="candles"></tbody></table></div></div>
-<div class="footer">RFM Quant v0.6 · Apenas investigação e simulação. Dados públicos sujeitos a disponibilidade e limites da OKX. <a style="color:#9cb8ff" href="/docs">Documentação da API</a></div></div>
+:root{color-scheme:dark;font-family:Inter,system-ui,-apple-system,Segoe UI,Arial,sans-serif;background:#0a101b;color:#edf2ff}
+*{box-sizing:border-box}body{margin:0}
+.shell{max-width:1320px;margin:auto;padding:27px 24px 40px}
+header,.between{display:flex;justify-content:space-between;align-items:center;gap:14px;flex-wrap:wrap}
+.brand{font-size:23px;font-weight:850;letter-spacing:-.7px}.brand em{color:#89abff;font-style:normal}
+.bubble{background:#162b27;border:1px solid #346959;color:#9ce3cc;border-radius:100px;padding:7px 12px;font-size:12px}
+h1{font-size:clamp(24px,4vw,33px);margin:38px 0 8px;letter-spacing:-.6px}h2{font-size:18px;margin:0 0 6px}p,.muted{color:#9dacbf;line-height:1.6}p{margin:8px 0 18px}
+.panel{border-radius:16px;background:#111c2b;border:1px solid #26364d;padding:22px;min-width:0}
+.cards{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:14px;margin:24px 0}
+.panel small{color:#9aacc1}.number{font-size:29px;font-weight:800;letter-spacing:-.4px;margin:11px 0 5px}
+.layout{display:grid;grid-template-columns:minmax(0,1.8fr) minmax(285px,1fr);gap:16px}
+.stack{display:grid;gap:16px}
+.toolbar{display:flex;flex-wrap:wrap;align-items:end;gap:12px;margin:18px 0}
+label{font-size:12px;color:#b1c2d7;display:flex;flex-direction:column;gap:6px}
+select,button{border:1px solid #3a4e68;background:#1b2b42;color:#eaf0fd;border-radius:9px;padding:10px 12px;font:inherit;font-size:13px;min-height:42px}
+button{cursor:pointer;background:#315acc;border-color:#4268cf;font-weight:650}button:hover{filter:brightness(1.15)}
+button:disabled{opacity:.5;cursor:wait}.secondary{background:#1b2b42;border-color:#40536b}
+select{min-width:120px;cursor:pointer}
+.status{font-size:13px;color:#aec0d7;line-height:1.5;min-height:20px}.error{color:#ffaaaa}
+.positive{color:#8bdcba}.warning{color:#ffd9a3}.pill{border-radius:99px;padding:3px 9px;font-size:11px;background:#1d2c40;color:#b5c8e2;display:inline-block}
+.chart{width:100%;height:230px;background:#0b1422;border-radius:10px;border:1px solid #203047;margin:14px 0}
+.chart-empty{height:230px;display:flex;align-items:center;justify-content:center;color:#8297b1}
+.tablewrap{overflow:auto;max-height:390px}table{width:100%;border-collapse:collapse;text-align:left}
+th,td{border-bottom:1px solid #26374d;padding:11px 9px;font-size:12px;white-space:nowrap}
+th{color:#95a9c0;font-weight:650;position:sticky;top:0;background:#111c2b}
+tr[data-contract]{cursor:pointer}tr[data-contract]:hover{background:#1b2c45}
+.mono{font-variant-numeric:tabular-nums;font-family:ui-monospace,SFMono-Regular,Consolas,monospace}
+.meta{font-size:12px;color:#95abc7;margin-top:10px}
+hr{border:0;border-top:1px solid #28374c;margin:19px 0}
+footer{font-size:12px;color:#8197b1;margin-top:26px}
+a{color:#9abaff}
+@media(max-width:950px){.layout{grid-template-columns:1fr}.cards{grid-template-columns:repeat(2,1fr)}}
+@media(max-width:520px){.shell{padding:18px 14px}.cards{grid-template-columns:1fr 1fr}.number{font-size:23px}.panel{padding:16px}select{min-width:110px}}
+</style></head>
+<body><main class="shell">
+<header><div class="brand">RFM <em>Quant</em> <span class="pill">BETA</span></div><div class="bubble">INVESTIGAÇÃO · SEM ORDENS REAIS</div></header>
+<h1>Pesquisa quantitativa de criptomoedas</h1>
+<p>Dados públicos da OKX, verificação do histórico e ferramentas de investigação. Ainda não existem resultados validados da estratégia RFM.</p>
+<section class="cards">
+<div class="panel"><small>Criptomoedas selecionadas</small><div class="number" id="watchcount">—</div><small>Universo configurado</small></div>
+<div class="panel"><small>SWAP USDT encontrados</small><div class="number" id="swapcount">—</div><small>Catálogo público da OKX</small></div>
+<div class="panel"><small>Velas carregadas</small><div class="number" id="barcount">—</div><small id="coveragedays">A selecionar o mercado</small></div>
+<div class="panel"><small>Estado do servidor</small><div class="number" id="health">A verificar</div><small id="updated">Serviço Render</small></div>
+</section>
+<section class="layout">
+<div class="stack">
+<div class="panel">
+<div class="between"><div><h2>Explorador de preços</h2><div class="muted">Gráfico do fecho e velas históricas confirmadas</div></div><span class="pill">OKX · OHLCV</span></div>
+<div class="toolbar">
+<label>Contrato<select id="symbol"><option value="BTC-USDT-SWAP">BTC-USDT-SWAP</option></select></label>
+<label>Timeframe<select id="bar"><option value="15m">15 min</option><option value="1H">1 hora</option><option value="4H" selected>4 horas</option><option value="1D">1 dia</option></select></label>
+<label>Velas<select id="bars"><option value="100">100</option><option value="300">300</option><option value="650" selected>650</option><option value="1200">1200</option><option value="2000">2000</option></select></label>
+<button id="history-btn">Carregar histórico</button>
+</div>
+<div id="history-status" class="status" role="status">A aguardar dados...</div>
+<div id="chart" class="chart-empty">Sem histórico carregado</div>
+<div class="tablewrap"><table><thead><tr><th>Data (UTC)</th><th>Abertura</th><th>Máximo</th><th>Mínimo</th><th>Fecho</th></tr></thead><tbody id="candles"></tbody></table></div>
+<div class="meta" id="history-meta">Velas confirmadas, ordenadas no tempo. Não há preenchimento artificial de falhas.</div>
+</div>
+<div class="panel">
+<div class="between"><div><h2>Auditoria de continuidade</h2><div class="muted">Verificação de histórico de 4H durante cerca de 90 dias</div></div><button class="secondary" id="audit-btn">Auditar 4H</button></div>
+<div class="status" id="audit-result" style="margin-top:14px">Ainda não executada.</div>
+<hr><div class="meta">Uma auditoria positiva não confirma spreads, profundidade do livro, funding nem vantagem estatística. É apenas um filtro de qualidade das velas.</div>
+</div>
+</div>
+<div class="stack">
+<div class="panel">
+<div class="between"><div><h2>Universo de investigação</h2><div class="muted">Disponibilidade atual dos 31 símbolos</div></div><span class="pill">Contratos, não resultados</span></div>
+<div id="universe-status" class="status" style="margin:13px 0">A consultar catálogo...</div>
+<div class="tablewrap" style="max-height:580px"><table><thead><tr><th>Ativo</th><th>USDT SWAP</th><th>USDC SWAP</th></tr></thead><tbody id="universe-table"></tbody></table></div>
+<div class="meta">Os ativos sem contrato nesta consulta não são automaticamente substituídos por outros com nomes semelhantes. A disponibilidade também pode variar conforme a região.</div>
+</div>
+<div class="panel"><h2>Motor RFM</h2><p>A infraestrutura para simular operações com sinais fornecidos já foi acrescentada ao backend. A deteção automática de BOS, FVG e níveis Fibonacci ainda não está validada.</p>
+<div class="status warning">Questão matemática por resolver: entrada no nível 75, stop no 0 e alvo no 100 representam apenas 0,33R, não 3R.</div>
+<div class="meta" style="margin-top:14px">Sem backtesting aprovado, sem previsão de lucros e sem negociação automática.</div>
+</div>
+</div>
+</section>
+<footer>RFM Quant v0.7 · Investigação estatística · <a href="/docs">Documentação técnica</a> · Nenhuma API de execução de ordens configurada.</footer>
+</main>
 <script>
-const $=id=>document.getElementById(id);
-async function json(path){const r=await fetch(path,{cache:"no-store"});if(!r.ok)throw Error("HTTP "+r.status);return r.json()}
-function cell(tr,value){const td=document.createElement("td");td.textContent=String(value);tr.append(td)}
-async function init(){try{const h=await json("/health");$("health").textContent=h.status==="ok"?"Online":"Indisponível";$("updated").textContent="Última verificação: "+new Date().toLocaleTimeString("pt-PT")}catch(e){$("health").textContent="Erro";$("updated").textContent=e.message}
-try{const w=await json("/api/watchlist");$("watchcount").textContent=w.count}catch(e){$("watchcount").textContent="Erro"}
-try{const s=await json("/api/okx/swaps");$("swapcount").textContent=s.count;const ids=[...new Set(s.instruments.map(x=>x.instId).filter(x=>x&&x.endsWith("-SWAP")))].sort();const select=$("symbol");select.replaceChildren();for(const id of ids){const opt=document.createElement("option");opt.value=id;opt.textContent=id;select.append(opt)}if(ids.includes("BTC-USDT-SWAP"))select.value="BTC-USDT-SWAP";if(!ids.length)throw Error("Sem contratos disponíveis")}catch(e){$("swapcount").textContent="Erro";$("notice").textContent="Falha ao consultar instrumentos: "+e.message;$("notice").classList.add("error")}
-await load()}
-async function load(){$("notice").textContent="A consultar histórico…";$("notice").classList.remove("error");$("candles").replaceChildren();try{const q=new URLSearchParams({inst_id:$("symbol").value,bar:$("bar").value,limit:"50"});const d=await json("/api/okx/candles?"+q);for(const c of [...d.candles].reverse()){const tr=document.createElement("tr");cell(tr,new Date(c.ts).toISOString().replace("T"," ").slice(0,16));for(const k of ["open","high","low","close"])cell(tr,c[k]);cell(tr,c.confirmed?"Sim":"Não");$("candles").append(tr)}$("notice").textContent=d.count+" velas devolvidas · UTC · sem backtest"}catch(e){$("notice").textContent="Não foi possível obter candles: "+e.message;$("notice").classList.add("error")}}
-async function audit(){const symbol=$("symbol").value.split("-")[0];const out=$("audit-result");out.textContent="A verificar "+symbol+"…";out.classList.remove("error");try{const result=await json("/api/okx/audit/"+encodeURIComponent(symbol));if(result.status==="unavailable"){out.textContent=symbol+": contrato USDT SWAP não disponível";return}const a=result.sample;out.textContent=symbol+": "+(a.status==="sample_pass"?"amostra sem alertas":"revisão necessária")+" · "+a.confirmed_bars+" velas · "+a.missing_intervals+" intervalos em falta"+(a.reasons.length?" · "+a.reasons.join(", "):"")+" · Não é aprovação para trading"}catch(e){out.textContent="Erro na auditoria: "+e.message;out.classList.add("error")}}
-$("audit").addEventListener("click",audit);
-$("reload").addEventListener("click",init);$("symbol").addEventListener("change",load);$("bar").addEventListener("change",load);init();
+const el=id=>document.getElementById(id);
+const safeNum=v=>Number.isFinite(Number(v))?Number(v).toLocaleString("pt-PT",{maximumSignificantDigits:9}):"—";
+async function api(path){const response=await fetch(path,{cache:"no-store"});let data;try{data=await response.json()}catch(e){throw Error("Resposta inválida do servidor")}
+if(!response.ok){let detail=data.detail;throw Error(typeof detail==="string"?detail:(detail&&detail.message)||"HTTP "+response.status)}return data}
+function cell(tr,value){const td=document.createElement("td");td.textContent=String(value);tr.append(td);return td}
+function showChart(data){const target=el("chart");target.replaceChildren();target.className="chart";
+const candles=data.slice(-260);if(candles.length<2){target.className="chart-empty";target.textContent="Histórico insuficiente para traçar gráfico";return}
+const ns="http://www.w3.org/2000/svg";const svg=document.createElementNS(ns,"svg");svg.setAttribute("viewBox","0 0 900 240");svg.setAttribute("preserveAspectRatio","none");svg.style.width="100%";svg.style.height="100%";
+const vals=candles.map(x=>Number(x.close));const min=Math.min(...vals);const max=Math.max(...vals);const spread=Math.max(max-min,Math.max(max,1)*0.001);
+const pts=vals.map((v,i)=>[18+(i/(vals.length-1))*862,215-((v-min)/spread)*190]);
+for(const y of [32,90,150,215]){const line=document.createElementNS(ns,"line");line.setAttribute("x1","18");line.setAttribute("x2","880");line.setAttribute("y1",String(y));line.setAttribute("y2",String(y));line.setAttribute("stroke","#273a54");line.setAttribute("stroke-width","1");svg.append(line)}
+const path=document.createElementNS(ns,"polyline");path.setAttribute("points",pts.map(p=>p.map(x=>x.toFixed(2)).join(",")).join(" "));path.setAttribute("fill","none");path.setAttribute("stroke","#93b4ff");path.setAttribute("stroke-width","2.5");path.setAttribute("vector-effect","non-scaling-stroke");svg.append(path);target.append(svg);
+target.setAttribute("aria-label","Gráfico da série de preços de fecho. Mínimo "+safeNum(min)+", máximo "+safeNum(max))}
+let requestId=0;
+async function loadHistory(){const current=++requestId;const button=el("history-btn");button.disabled=true;el("history-status").textContent="A recolher páginas do histórico da OKX...";
+try{const qs=new URLSearchParams({inst_id:el("symbol").value,bar:el("bar").value,bars:el("bars").value});const data=await api("/api/okx/history?"+qs.toString());if(current!==requestId)return;
+el("barcount").textContent=data.returned_bars;el("coveragedays").textContent=safeNum(data.coverage_days)+" dias de cobertura";
+const tbody=el("candles");tbody.replaceChildren();for(const c of data.candles.slice(-35).reverse()){const tr=document.createElement("tr");cell(tr,new Date(c.ts).toISOString().slice(0,16).replace("T"," "));for(const key of ["open","high","low","close"]){cell(tr,safeNum(c[key])).className="mono"}tbody.append(tr)}
+showChart(data.candles);
+el("history-status").textContent=data.returned_bars+" de "+data.requested_bars+" velas · "+data.pages_requested+" páginas · "+data.missing_intervals+" intervalos em falta";
+el("history-meta").textContent="UTC · "+safeNum(data.coverage_days)+" dias de cobertura · "+data.rejected.malformed+" velas inválidas · "+data.rejected.duplicate+" duplicadas. Não são dados de backtesting certificados."}
+catch(e){if(current===requestId){el("history-status").textContent="Erro ao carregar histórico: "+e.message;el("history-status").classList.add("error")}}
+finally{if(current===requestId)button.disabled=false}}
+async function loadUniverse(){try{const u=await api("/api/okx/universe");el("watchcount").textContent=u.count;el("swapcount").textContent=u.available_usdt;el("universe-status").textContent=u.available_usdt+" pares USDT SWAP encontrados no catálogo.";
+const tbody=el("universe-table");tbody.replaceChildren();const select=el("symbol");const old=select.value;select.replaceChildren();
+for(const item of u.assets){const tr=document.createElement("tr");cell(tr,item.symbol).style.fontWeight="700";cell(tr,item.usdt_swap?"Disponível":"—").className=item.usdt_swap?"positive":"muted";cell(tr,item.usdc_swap?"Disponível":"—").className=item.usdc_swap?"positive":"muted";
+const candidate=item.usdt_swap||item.usdc_swap;if(candidate){tr.dataset.contract=candidate;tr.title="Selecionar "+candidate;const option=document.createElement("option");option.value=candidate;option.textContent=candidate;select.append(option);tr.addEventListener("click",()=>{select.value=candidate;loadHistory()})}tbody.append(tr)}
+if([...select.options].some(o=>o.value===old))select.value=old;else if([...select.options].some(o=>o.value==="BTC-USDT-SWAP"))select.value="BTC-USDT-SWAP";
+if(!select.options.length){const opt=document.createElement("option");opt.textContent="Sem contratos";opt.value="";select.append(opt);el("history-status").textContent="Não foram encontrados contratos selecionáveis";return}
+await loadHistory()}
+catch(e){el("universe-status").textContent="Não foi possível consultar contratos: "+e.message;el("universe-status").classList.add("error");await loadHistory()}}
+async function audit(){const button=el("audit-btn");button.disabled=true;const result=el("audit-result");result.classList.remove("error");const symbol=el("symbol").value.split("-")[0];result.textContent="A verificar "+symbol+" em 4H (650 velas)...";
+try{const d=await api("/api/okx/coverage/"+encodeURIComponent(symbol)+"?bar=4H&bars=650&minimum_days=90");
+if(d.status==="no_live_usdt_swap"){result.textContent=symbol+": não há SWAP USDT ativo no catálogo desta consulta.";return}
+const q=d.quality;result.textContent=symbol+": "+(q.status==="window_quality_pass"?"amostra sem alertas":"requer revisão")+" · "+q.bars_checked+" velas · "+q.coverage_days+" dias · "+q.missing_intervals+" lacunas"+(q.flags.length?" · Alertas: "+q.flags.join(", "):"")+" · Liquidez não certificada."}
+catch(e){result.textContent="Erro na auditoria: "+e.message;result.classList.add("error")}finally{button.disabled=false}}
+async function startup(){try{const h=await api("/health");el("health").textContent=h.status==="ok"?"Online":"Erro";el("updated").textContent="Verificado "+new Date().toLocaleTimeString("pt-PT")}catch(e){el("health").textContent="Erro"}
+await loadUniverse()}
+el("history-btn").addEventListener("click",()=>{el("history-status").classList.remove("error");loadHistory()});
+el("audit-btn").addEventListener("click",audit);el("symbol").addEventListener("change",loadHistory);el("bar").addEventListener("change",loadHistory);el("bars").addEventListener("change",loadHistory);
+startup();
 </script></body></html>
