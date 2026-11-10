@@ -55,6 +55,15 @@ def summarize_liquidity_for_swing(zones, *, hundred_price, zero_price,
     independent_contextual=[
         r for r in independent_unbreached
         if r["formed_during_impulse"] or r["known_before_impulse"]]
+    # Liquidity can also be external to the selected Fibonacci amplitude.
+    # Keep levels on either side without inventing a maximum price distance.
+    independent_unbreached_all=[
+        r for r in rows if not r["is_fibonacci_anchor"] and
+        r["unbreached_at_signal"]]
+    external_above=[
+        r for r in independent_unbreached_all if r["price"]>high]
+    external_below=[
+        r for r in independent_unbreached_all if r["price"]<low]
     return {
         "all_known_zone_count":len(rows),
         "in_swing_price_range_count":len(in_range),
@@ -69,8 +78,12 @@ def summarize_liquidity_for_swing(zones, *, hundred_price, zero_price,
         "independent_unbreached_contextual_count":len(independent_contextual),
         "independent_unbreached_contextual_types":len({
             r["type"] for r in independent_contextual}),
+        "independent_unbreached_external_above_count":len(external_above),
+        "independent_unbreached_external_below_count":len(external_below),
+        "independent_unbreached_external_types":len({
+            r["type"] for r in external_above+external_below}),
         "observed_zone_types":sorted({r["type"] for r in in_range}),
         "independent_unbreached_contextual_levels":independent_contextual,
         "unbreached_contextual_levels":both,
-        "warning":"Fibonacci anchors are excluded from independent structural counts. These descriptive features do not establish real liquidity or an approved entry threshold."
+        "warning":"Fibonacci anchors are excluded from independent structural counts; external levels can be anywhere outside the Fib range. No proximity requirement, claim of real liquidity, or approved entry threshold."
     }
