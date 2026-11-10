@@ -1,0 +1,160 @@
+<!doctype html>
+<html lang="pt-PT">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>RFM Quant | Fibonacci e POC dinâmico</title>
+<style>
+:root{color-scheme:dark;background:#09101b;color:#e8eef9;font-family:Inter,system-ui,-apple-system,Segoe UI,sans-serif}
+*{box-sizing:border-box}body{margin:0}
+main{max-width:1180px;margin:auto;padding:26px 20px 55px}
+a{color:#98b8ff;text-decoration:none}
+nav{display:flex;align-items:center;justify-content:space-between;gap:15px;flex-wrap:wrap}
+.brand{font-weight:850;font-size:22px;letter-spacing:-.5px}.brand b{color:#94b1ff}
+.label{color:#9bdaba;background:#17372b;border-radius:99px;padding:7px 12px;font-size:12px}
+h1{font-size:clamp(23px,3.8vw,32px);margin:38px 0 8px}
+h2{font-size:18px;margin:0 0 9px}
+p{line-height:1.55;color:#9daec6}
+.panel{background:#111c2a;border:1px solid #273850;border-radius:16px;padding:21px;margin:18px 0}
+.controls{display:flex;flex-wrap:wrap;gap:13px;align-items:end}
+label{display:flex;flex-direction:column;gap:6px;color:#afbfda;font-size:12px}
+input,select,button{background:#1d2c41;color:#e8eef9;border:1px solid #405471;border-radius:9px;font:inherit;font-size:14px;padding:10px 12px;height:42px}
+input{min-width:130px;width:165px}select{min-width:125px;max-width:100%}
+button{background:#365ed0;border-color:#5679e1;cursor:pointer;font-weight:700}
+button:hover{filter:brightness(1.13)}button:disabled{cursor:wait;opacity:.55}
+.secondary{background:#21334b;border-color:#3d5472}
+.muted{color:#97a9c1;font-size:13px;line-height:1.5}
+.status{margin-top:15px;min-height:20px;font-size:13px;color:#b1c3df}
+.error{color:#ffadad}.good{color:#a8ecd0}.warn{color:#ffce91}
+.graph{background:#0b1523;border:1px solid #283c54;border-radius:12px;overflow:hidden;margin-top:16px}
+.graph svg{width:100%;height:320px;display:block}
+.smallhead{font-size:12px;color:#9aaec9;letter-spacing:.6px;text-transform:uppercase}
+.stats{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:11px;margin:16px 0}
+.stat{background:#0b1828;border:1px solid #2b3c54;border-radius:10px;padding:14px;min-width:0}
+.stat span{display:block;color:#9bb1cc;font-size:12px;line-height:1.4}
+.stat strong{display:block;font-size:18px;margin-top:7px;overflow-wrap:anywhere;font-variant-numeric:tabular-nums}
+.two{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+.readout{white-space:pre-wrap;word-break:break-word;color:#a7bedc;font-size:13px;line-height:1.7}
+.note{font-size:12px;color:#93a4bd;margin:15px 0 3px;line-height:1.55}
+footer{margin-top:30px;font-size:12px;color:#7f93af}
+@media(max-width:800px){.stats{grid-template-columns:repeat(2,minmax(0,1fr))}.two{grid-template-columns:1fr}}
+@media(max-width:520px){main{padding:17px 13px}.panel{padding:16px}.stats{grid-template-columns:1fr 1fr}.stat{padding:10px}.stat strong{font-size:16px}.graph svg{height:245px}}
+</style></head>
+<body><main>
+<nav><div class="brand">RFM <b>Quant</b> · POC Lab</div><a href="/">Voltar ao dashboard</a><span class="label">APENAS INVESTIGAÇÃO</span></nav>
+<h1>Fibonacci + Volume Profile</h1>
+<p>Marca os pontos da tua Fibonacci e a vela em que começou. Calculamos os níveis 67% e 75% e um <b>POC aproximado</b> desde essa vela até à última vela fechada que escolheres. Isto não é um sinal de entrada nem uma simulação de lucro.</p>
+<section class="panel">
+<h2>1. Histórico de mercado</h2>
+<div class="controls">
+<label>Contrato<select id="instrument"><option value="BTC-USDT-SWAP">BTC-USDT-SWAP</option></select></label>
+<label>Timeframe<select id="bar"><option value="15m">15 min</option><option value="1H">1 hora</option><option value="4H">4 horas</option></select></label>
+<label>Quantidade de velas<select id="bars"><option value="300">300</option><option value="650" selected>650</option><option value="1200">1200</option><option value="2000">2000</option></select></label>
+<button id="load">Carregar histórico</button>
+</div>
+<div class="status" id="market-status" role="status">Seleciona um contrato e carrega as velas.</div>
+<div class="graph" id="price-graph"><div style="padding:50px;color:#8194ad;text-align:center">Histórico ainda não carregado</div></div>
+</section>
+<section class="panel">
+<h2>2. Âncoras e instante da análise</h2>
+<p class="muted">A seleção de datas utiliza a hora de <b>abertura</b> da vela na OKX. O cálculo só considera velas confirmadas até ao fim da vela escolhida, nunca as seguintes.</p>
+<div class="controls">
+<label>Direção<select id="side"><option value="long">Long (bullish)</option><option value="short">Short (bearish)</option></select></label>
+<label>Fib 0% · lado do TP<input type="number" inputmode="decimal" step="any" min="0" id="zero" placeholder="Preço do nível 0"></label>
+<label>Fib 100% · lado do SL<input type="number" inputmode="decimal" step="any" min="0" id="hundred" placeholder="Preço do nível 100"></label>
+<label>Início da Fib / Profile<select id="anchor"><option>Carrega histórico</option></select></label>
+<label>Última vela analisada<select id="asof"><option>Carrega histórico</option></select></label>
+</div>
+<div class="note">Para long, o nível 0 fica acima do 100. Para short, fica abaixo. O risco/retorno teórico é 2,03R na entrada a 67% e 3R na de 75%, antes de custos.</div>
+</section>
+<section class="panel">
+<h2>3. Confirmações opcionais</h2>
+<p class="muted">Podes indicar os limites de um FVG que identificaste no TradingView. O POC não é obrigatório; BOS, CHoCH e liquidity sweep não são impostos como filtros universais.</p>
+<div class="controls">
+<label>FVG limite inferior<input id="fvg-low" type="number" step="any" min="0" placeholder="Opcional"></label>
+<label>FVG limite superior<input id="fvg-high" type="number" step="any" min="0" placeholder="Opcional"></label>
+<label>Alinhamento 4H (manual)<select id="alignment"><option value="na">Não avaliado</option><option value="discount">Discount</option><option value="premium">Premium</option></select></label>
+<label>Bandas de preço<select id="bins"><option value="24">24</option><option value="48" selected>48</option><option value="96">96</option></select></label>
+<button id="calculate">Calcular confluências</button>
+</div>
+<div class="status" id="calc-status" role="status">Preenche os níveis e calcula.</div>
+<div class="stats" id="stats"></div>
+<div class="two">
+<div class="stat"><div class="smallhead">POC / Gold Zone</div><div class="readout" id="poc-note">Ainda não avaliado.</div></div>
+<div class="stat"><div class="smallhead">FVG / Alinhamento</div><div class="readout" id="fvg-note">Ainda não avaliado.</div></div>
+</div>
+<p class="note">Limitação: a API fornece velas OHLCV agregadas, não o volume real negociado a cada preço. O POC exibido é uma aproximação que distribui o volume de cada vela uniformemente pelo intervalo mínimo-máximo. A distância “perto do POC” não tem uma tolerância aprovada, por isso só identificamos sobreposição exata com a Gold Zone. Os FVG introduzidos manualmente não são certificados pelo algoritmo.</p>
+</section>
+<footer>RFM Quant v0.9 · Ferramenta de investigação, sem execução de ordens · <a href="/docs">Documentação API</a></footer>
+</main>
+<script>
+const $=id=>document.getElementById(id);
+let candleData=[],activeContract="",lastPoc=null;
+const sNum=x=>Number(x).toLocaleString("pt-PT",{maximumSignificantDigits:10});
+const dateLabel=ts=>new Date(ts).toISOString().slice(0,16).replace("T"," ")+" UTC";
+async function getJson(url,opts={}){const r=await fetch(url,{cache:"no-store",...opts});let data;try{data=await r.json()}catch(e){throw Error("Resposta do servidor inválida")}if(!r.ok)throw Error(typeof data.detail==="string"?data.detail:"HTTP "+r.status);return data}
+function show(el,msg,isError=false){el.textContent=msg;el.classList.toggle("error",isError)}
+function stat(name,value){const item=document.createElement("div");item.className="stat";const a=document.createElement("span");a.textContent=name;const b=document.createElement("strong");b.textContent=value;item.append(a,b);return item}
+function makeSvg(type,attrs){const e=document.createElementNS("http://www.w3.org/2000/svg",type);for(const [key,value] of Object.entries(attrs||{}))e.setAttribute(key,String(value));return e}
+function label(svg,text,x,y,color){const el=makeSvg("text",{x,y,fill:color,"font-size":12,"font-family":"system-ui"});el.textContent=text;svg.append(el)}
+function draw(candles,levels=null,selectedTs=null){const container=$("price-graph");container.replaceChildren();const ends=selectedTs==null?candles:candles.filter(c=>c.ts<=selectedTs);
+const tail=ends.slice(-230);if(tail.length<2){container.textContent="Histórico insuficiente";return}
+const extras=levels?[levels.zero,levels.hundred,levels.l67,levels.l75,levels.poc]:[];
+const values=tail.flatMap(c=>[Number(c.high),Number(c.low)]).concat(extras.filter(Number.isFinite));
+let low=Math.min(...values),high=Math.max(...values),pad=Math.max((high-low)*.05,high*.000001);low-=pad;high+=pad;
+const width=920,height=300,left=30,right=850,top=20,bottom=265;
+const x=i=>left+i/(tail.length-1)*(right-left);const y=p=>bottom-(p-low)/(high-low)*(bottom-top);
+const svg=makeSvg("svg",{viewBox:"0 0 920 300",preserveAspectRatio:"none",role:"img","aria-label":"Gráfico de preços com níveis teóricos da Fibonacci"});
+for(let i=0;i<5;i++){const Y=top+(bottom-top)*i/4;svg.append(makeSvg("line",{x1:left,y1:Y,x2:right,y2:Y,stroke:"#26374f","stroke-width":1}));label(svg,sNum(high-(high-low)*i/4),right+8,Y+4,"#91a6c2")}
+const points=tail.map((c,i)=>x(i)+","+y(Number(c.close)));
+svg.append(makeSvg("polyline",{points:points.join(" "),fill:"none",stroke:"#9ab5ff","stroke-width":2.2,"vector-effect":"non-scaling-stroke"}));
+if(levels){const line=(price,color,name)=>{if(!Number.isFinite(price))return;const Y=y(price);svg.append(makeSvg("line",{x1:left,y1:Y,x2:right,y2:Y,stroke:color,"stroke-width":1.8,"stroke-dasharray":"5 4"}));label(svg,name,left+8,Y-5,color)};
+const zlo=Math.min(levels.l67,levels.l75),zhi=Math.max(levels.l67,levels.l75);
+svg.append(makeSvg("rect",{x:left,y:y(zhi),width:right-left,height:y(zlo)-y(zhi),fill:"#284d3a","fill-opacity":".38"}));
+line(levels.zero,"#a1b8ff","Fib 0% (TP)");line(levels.hundred,"#ff9a9a","Fib 100% (SL)");
+line(levels.l67,"#8dd9bc","67%");line(levels.l75,"#8dd9bc","75%");
+line(levels.poc,"#f0d18a","POC proxy");}
+label(svg,dateLabel(tail[0].ts).slice(0,16),left,bottom+25,"#a5b7ce");
+label(svg,dateLabel(tail[tail.length-1].ts).slice(0,16),right-135,bottom+25,"#a5b7ce");
+container.append(svg)}
+function fillDates(rows){const anchor=$("anchor"),asof=$("asof");anchor.replaceChildren();asof.replaceChildren();
+for(const bar of rows){for(const select of [anchor,asof]){const opt=document.createElement("option");opt.value=String(bar.ts);opt.textContent=dateLabel(bar.ts);select.append(opt)}}
+if(rows.length){anchor.value=String(rows[Math.max(0,rows.length-97)].ts);asof.value=String(rows[rows.length-1].ts)}}
+async function initContracts(){try{const u=await getJson("/api/okx/universe");const inst=$("instrument");inst.replaceChildren();
+for(const asset of u.assets){for(const pair of [asset.usdt_swap,asset.usdc_swap])if(pair){const opt=document.createElement("option");opt.value=pair;opt.textContent=pair;inst.append(opt)}}
+if([...inst.options].some(x=>x.value==="BTC-USDT-SWAP"))inst.value="BTC-USDT-SWAP";
+if(!inst.options.length)throw Error("Não há contratos disponíveis")}
+catch(e){show($("market-status"),"Não foi possível atualizar contratos: "+e.message,true)}}
+async function load(){const button=$("load");button.disabled=true;lastPoc=null;candleData=[];$("stats").replaceChildren();show($("market-status"),"A recolher histórico...");
+try{const contract=$("instrument").value,bar=$("bar").value,bars=$("bars").value;
+const qs=new URLSearchParams({inst_id:contract,bar,bars});const h=await getJson("/api/okx/history?"+qs);
+if(h.instrument!==contract)throw Error("Contrato inesperado");
+activeContract=contract;candleData=h.candles;fillDates(candleData);draw(candleData);
+show($("market-status"),contract+": "+h.returned_bars+" velas confirmadas, "+h.coverage_days+" dias, "+h.missing_intervals+" intervalos em falta.");
+show($("calc-status"),"Marca os preços de 0% e 100% e escolhe as datas para calcular.");}
+catch(e){show($("market-status"),"Erro ao carregar: "+e.message,true)}finally{button.disabled=false}}
+function optionalFvg(goldLow,goldHigh){const t1=$("fvg-low").value,t2=$("fvg-high").value;
+if(!t1&&!t2)return "FVG: não indicado (opcional).";
+const low=Number(t1),high=Number(t2);if(!t1||!t2||!Number.isFinite(low)||!Number.isFinite(high)||low<=0||high<=low)return "FVG: limites inválidos.";
+const overlap=Math.min(high,goldHigh)-Math.max(low,goldLow);
+return overlap>0?"FVG manual sobrepõe a Gold Zone (a validade histórica ainda não foi verificada).":"FVG manual sem sobreposição com Gold Zone."}
+async function calculate(){const button=$("calculate"),status=$("calc-status"),grid=$("stats");
+grid.replaceChildren();lastPoc=null;if(!candleData.length){show(status,"Carrega histórico primeiro.",true);return}
+const zero=Number($("zero").value),hundred=Number($("hundred").value),side=$("side").value;
+if(!$("zero").value||!$("hundred").value||!Number.isFinite(zero)||!Number.isFinite(hundred)||zero<=0||hundred<=0){show(status,"Indica os dois preços da Fib.",true);return}
+if(side==="long"&&zero<=hundred||side==="short"&&zero>=hundred){show(status,"Para long o 0% está acima do 100%; para short acontece o contrário.",true);return}
+const anchor=Number($("anchor").value),asof=Number($("asof").value);
+if(!anchor||!asof||anchor>asof){show(status,"O início da Fibonacci tem de ser anterior ou igual à última vela analisada.",true);return}
+button.disabled=true;show(status,"A calcular o perfil até à vela selecionada...");
+try{const report=await getJson("/api/research/poc",{method:"POST",headers:{"Content-Type":"application/json"},
+body:JSON.stringify({candles:candleData,bar:$("bar").value,anchor_ts:anchor,asof_ts:asof,bins:Number($("bins").value),zero_price:zero,hundred_price:hundred,side})});
+lastPoc=report;const l67=zero+.67*(hundred-zero),l75=zero+.75*(hundred-zero),goldLo=Math.min(l67,l75),goldHi=Math.max(l67,l75);
+for(const [a,b] of [["Entrada Fib 67% · ~2,03R",sNum(l67)],["Entrada Fib 75% · 3R",sNum(l75)],["Gold Zone",sNum(goldLo)+" a "+sNum(goldHi)],["POC aproximado",sNum(report.poc_price_approx)],["POC dentro da Gold Zone",report.gold_zone.poc_inside_zone?"SIM":"Não"],["Distância do POC à Gold Zone",sNum(report.gold_zone.distance_from_zone_pct_swing)+"% do swing"],["Velas usadas",String(report.confirmed_bars_used)],["Velas futuras ignoradas",String(report.future_bars_ignored)]])grid.append(stat(a,b));
+$("poc-note").textContent=(report.gold_zone.poc_inside_zone?"Existe sobreposição exata entre o POC proxy e a Gold Zone.":"Não há sobreposição exata entre o POC proxy e a Gold Zone.")+"\nPOC é opcional. A proximidade não tem ainda uma tolerância definida.";
+const al=$("alignment").value;$("fvg-note").textContent=optionalFvg(goldLo,goldHi)+"\nAlinhamento 4H: "+(al==="na"?"não avaliado":al+" (introduzido manualmente).");
+draw(candleData,{zero,hundred,l67,l75,poc:report.poc_price_approx},asof);
+show(status,report.confirmed_bars_used+" velas confirmadas entre "+dateLabel(anchor)+" e "+dateLabel(asof)+". Proxy por distribuição uniforme; sem sinais automáticos.");}
+catch(e){show(status,"Erro no cálculo: "+e.message,true)}finally{button.disabled=false}}
+$("load").addEventListener("click",load);$("calculate").addEventListener("click",calculate);
+$("asof").addEventListener("change",()=>{if(candleData.length)draw(candleData,null,Number($("asof").value))});
+initContracts().then(load);
+</script></body></html>
