@@ -6,6 +6,7 @@ an entire UTC calendar period is present in the historical sample.
 No future candle may influence features calculated at asof_index.
 """
 from math import isfinite
+from bisect import bisect_left
 
 DAY_MS = 86_400_000
 WEEK_MS = 7 * DAY_MS
@@ -107,11 +108,34 @@ def structural_liquidity(candles, asof_index, *, interval_ms=900_000,
     asof_close_ts=bars[-1]["ts"]+interval_ms
     if any(z["known_after_close_ts"]>asof_close_ts for z in zones):
         raise ValueError("future information detected in structural feature")
+    # Track whether each KNOWN price level has since been breached by price.
+    # "Breached" is not the same as a confirmed liquidity sweep; it is
+    # an observable, time-causal feature only. Do not use as an entry gate.
+    time_starts=[b["ts"] for b in bars]
+    suffix_max=[float("-inf")]*(len(bars)+1)
+    suffix_min=[float("inf")]*(len(bars)+1)
+    for k in range(len(bars)-1,-1,-1):
+        suffix_max[k]=max(bars[k]["high"],suffix_max[k+1])
+        suffix_min[k]=min(bars[k]["low"],suffix_min[k+1])
+    upper_types={"BSL","EQH","PDH","PWH"}
+    lower_types={"SSL","EQL","PDL","PWL"}
+    for zone in zones:
+        first_after_confirm=bisect_left(time_starts,zone["known_after_close_ts"])
+        if zone["type"] in upper_types:
+            breached=suffix_max[first_after_confirm]>zone["price"]
+        elif zone["type"] in lower_types:
+            breached=suffix_min[first_after_confirm]<zone["price"]
+        else:
+            raise ValueError("unrecognised structural level type")
+        zone["breached_after_confirmation"]=breached
+    unbreached=sum(not z["breached_after_confirmation"] for z in zones)
     return {"status":"ok","zone_count":len(zones),
+            "unbreached_zone_count":unbreached,
             "bsl_count":len(piv_hi),"ssl_count":len(piv_lo),
             "eqh_pairs":len(eqh),"eql_pairs":len(eql),
             "previous_day_available":prev_day is not None,
             "previous_week_available":prev_week is not None,
             "atr":round(atr,12),"equal_price_tolerance":round(tolerance,12),
             "asof_ts":bars[-1]["ts"],"known_after_close_ts":asof_close_ts,
-            "zones":zones}
+            "zones":zones,
+            "warning":"A level breached after confirmation is only a price event; it does not prove a liquidity sweep or tradeable liquidity."}
