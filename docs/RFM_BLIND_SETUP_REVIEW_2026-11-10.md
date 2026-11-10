@@ -16,9 +16,9 @@ Distinguir decisões humanas da RFM (seleção do swing da Fibonacci, FVG ativa 
 - **RFM_Quant_Revisao_Cega_36_Setups.html** — aplicação autónoma que não usa Internet; mostra velas históricas, Gold Zone, FVG ainda ativa e amostras de níveis estruturais conhecidos no instante do sinal.
 - **RFM_Quant_Revisao_Cega_36_Setups.json** — manifesto auditável de casos e estratos selecionados.
 - **build_review_pack.py** — script Python de construção reproduzível, a partir dos ZIP históricos do projeto (disponibilizado juntamente com o pack).
-- O HTML foi validado num navegador Chromium: navegação, rádio, notas, exportação CSV/JSON, sem erros de JavaScript.
+- O HTML foi validado num navegador Chromium: navegação, rádio, notas, exportação CSV/JSON, sem erros de JavaScript. A categoria/estrato calculado pelo algoritmo permanece oculta durante a avaliação para reduzir enviesamento humano.
 - Testes Python locais: 4 aprovados; confirmam 36 IDs únicos, 12 por ativo, geração determinística, FVG causal sobreposta e ausência de dados de performance futura.
-- SHA-256 do HTML: `8ef60b9269c4f0ba96d0cd5d668e0c2f88e11ad49542aa939144deb8b4a3ac39`
+- SHA-256 do HTML: `97a6301bf7e6c493abd1731d79cacc5b093d8cceafa4f09523eef0b57d062def`
 - SHA-256 do manifesto JSON: `0bf7e51b65fe7edb9a4ab9587c20172c98793a8441db8e40948a8ef40651887f`
 
 ## Como usar
