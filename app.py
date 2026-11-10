@@ -144,7 +144,7 @@ async def coverage(
 
 @app.get("/api/research/fibonacci-rr-check")
 async def fibonacci_rr_check():
-    """Arithmetic illustration, NOT an approved RFM anchoring convention."""
+    """Arithmetic illustration of user-confirmed RFM orientation (before costs)."""
     return {"assumption":"Entry at level, stop=0, target=100 on the same linear scale",
             "examples":[{"entry":75,"risk":75,"reward":25,"rr":round(25/75,4)},
                         {"entry":67,"risk":67,"reward":33,"rr":round(33/67,4)}],
