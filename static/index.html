@@ -76,12 +76,12 @@ a{color:#9abaff}
 <div class="meta">Os ativos sem contrato nesta consulta não são automaticamente substituídos por outros com nomes semelhantes. A disponibilidade também pode variar conforme a região.</div>
 </div>
 <div class="panel"><h2>Motor RFM</h2><p>A infraestrutura para simular operações com sinais fornecidos já foi acrescentada ao backend. A deteção automática de BOS, FVG e níveis Fibonacci ainda não está validada.</p>
-<div class="status warning">Questão matemática por resolver: entrada no nível 75, stop no 0 e alvo no 100 representam apenas 0,33R, não 3R.</div>
+<div class="toolbar"><button class="secondary" id="structure-btn">Detetar BOS / FVG · 15m</button></div><div class="status" id="structure-result">Deteção ainda não executada.</div><hr><div class="status warning">Questão matemática por resolver: entrada no nível 75, stop no 0 e alvo no 100 representam apenas 0,33R, não 3R.</div>
 <div class="meta" style="margin-top:14px">Sem backtesting aprovado, sem previsão de lucros e sem negociação automática.</div>
 </div>
 </div>
 </section>
-<footer>RFM Quant v0.7 · Investigação estatística · <a href="/docs">Documentação técnica</a> · Nenhuma API de execução de ordens configurada.</footer>
+<footer>RFM Quant v0.8 · Investigação estatística · <a href="/docs">Documentação técnica</a> · Nenhuma API de execução de ordens configurada.</footer>
 </main>
 <script>
 const el=id=>document.getElementById(id);
@@ -116,13 +116,14 @@ if(!select.options.length){const opt=document.createElement("option");opt.textCo
 await loadHistory()}
 catch(e){el("universe-status").textContent="Não foi possível consultar contratos: "+e.message;el("universe-status").classList.add("error");await loadHistory()}}
 async function audit(){const button=el("audit-btn");button.disabled=true;const result=el("audit-result");result.classList.remove("error");const symbol=el("symbol").value.split("-")[0];result.textContent="A verificar "+symbol+" em 4H (650 velas)...";
-try{const d=await api("/api/okx/coverage/"+encodeURIComponent(symbol)+"?bar=4H&bars=650&minimum_days=90");
-if(d.status==="no_live_usdt_swap"){result.textContent=symbol+": não há SWAP USDT ativo no catálogo desta consulta.";return}
+try{const quote=el("symbol").value.split("-")[1];const d=await api("/api/okx/coverage/"+encodeURIComponent(symbol)+"?bar=4H&bars=650&minimum_days=90&quote="+encodeURIComponent(quote));
+if(d.status==="no_live_selected_swap"){result.textContent=symbol+": não há SWAP USDT ativo no catálogo desta consulta.";return}
 const q=d.quality;result.textContent=symbol+": "+(q.status==="window_quality_pass"?"amostra sem alertas":"requer revisão")+" · "+q.bars_checked+" velas · "+q.coverage_days+" dias · "+q.missing_intervals+" lacunas"+(q.flags.length?" · Alertas: "+q.flags.join(", "):"")+" · Liquidez não certificada."}
 catch(e){result.textContent="Erro na auditoria: "+e.message;result.classList.add("error")}finally{button.disabled=false}}
+async function structure(){const button=el("structure-btn");button.disabled=true;const result=el("structure-result");result.classList.remove("error");result.textContent="A calcular pivots, BOS e FVG em 15m...";try{const qs=new URLSearchParams({inst_id:el("symbol").value,bar:"15m",bars:"650",pivot_span:"3"});const d=await api("/api/research/structure?"+qs);const x=d.counts;result.textContent=d.instrument+" · BOS altistas: "+x.bos_bullish+" · BOS baixistas: "+x.bos_bearish+" · FVG altistas: "+x.fvg_bullish+" · FVG baixistas: "+x.fvg_bearish+" · Amostra: "+d.history_coverage_days+" dias. São eventos técnicos, não sinais de entrada."}catch(e){result.textContent="Não foi possível analisar estrutura: "+e.message;result.classList.add("error")}finally{button.disabled=false}}
 async function startup(){try{const h=await api("/health");el("health").textContent=h.status==="ok"?"Online":"Erro";el("updated").textContent="Verificado "+new Date().toLocaleTimeString("pt-PT")}catch(e){el("health").textContent="Erro"}
 await loadUniverse()}
 el("history-btn").addEventListener("click",()=>{el("history-status").classList.remove("error");loadHistory()});
-el("audit-btn").addEventListener("click",audit);el("symbol").addEventListener("change",loadHistory);el("bar").addEventListener("change",loadHistory);el("bars").addEventListener("change",loadHistory);
+el("audit-btn").addEventListener("click",audit);el("structure-btn").addEventListener("click",structure);el("symbol").addEventListener("change",loadHistory);el("bar").addEventListener("change",loadHistory);el("bars").addEventListener("change",loadHistory);
 startup();
 </script></body></html>
