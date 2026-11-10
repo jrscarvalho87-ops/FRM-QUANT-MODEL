@@ -66,3 +66,6 @@
 5. Liquidity sweep é confluência adicional possível, **não requisito universal**.
 
 **Regra de segurança para o backtest:** não tratar um score arbitrário de liquidez como regra aprovada. Antes de avaliar a rentabilidade, fixar tolerâncias, janelas e o limiar de aceitação com exemplos anotados pelo utilizador.
+
+## Clarificação adicional da liquidez (2026-11-10)
+O utilizador confirmou que o critério é a presença de **zonas relevantes de liquidez na estrutura do movimento**. Não é obrigatório estarem próximas da Gold Zone nem do take-profit. No modelo, registar localização, tipo, confirmação temporal e contexto estrutural das zonas; não impor restrições de distância sem validação adicional.
