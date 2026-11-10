@@ -9,10 +9,13 @@ import math
 
 def simulate(candles, signals, *, initial_equity=10_000.0, risk_pct=1.0,
              fee_bps=5.0, slippage_bps=2.0, max_exposure=1.0,
-             min_rr=2.0, interval_ms=900_000, max_hold_bars=96):
+             min_rr=2.0, interval_ms=900_000, max_hold_bars=96,
+             move_stop_to_be_at_r=1.0):
     if not (initial_equity > 0 and 0 < risk_pct <= 5 and 0 <= fee_bps <= 100
             and 0 <= slippage_bps <= 100 and 0 < max_exposure <= 5
-            and min_rr >= 0 and interval_ms > 0 and max_hold_bars >= 1):
+            and min_rr >= 0 and interval_ms > 0 and max_hold_bars >= 1
+            and (move_stop_to_be_at_r is None or
+                 0 < move_stop_to_be_at_r <= 10)):
         raise ValueError("invalid simulation settings")
 
     bars = list(candles)
@@ -105,30 +108,43 @@ def simulate(candles, signals, *, initial_equity=10_000.0, risk_pct=1.0,
         exit_index = None
         exit_price = None
         reason = None
+        be_armed = False
+        be_active = False
+        be_activated_ts = None
+        be_trigger_price = entry_ex + direction * (stop_risk * move_stop_to_be_at_r) if move_stop_to_be_at_r is not None else None
         for j in range(fill_index, min(len(bars),fill_index + max_hold_bars)):
             if j > fill_index and times[j] - times[j-1] != interval_ms:
                 reason = "data_gap"
                 break
+            # OHLC does not reveal whether +1R or a stop happened first.
+            # The BE stop is activated ONLY from the next bar, never retroactively.
+            if be_armed and not be_active:
+                be_active = True
+                be_activated_ts = times[j]
+            active_stop = entry_ex if be_active else stop
             b = bars[j]
             o, h, l, c = (float(b[k]) for k in ("open","high","low","close"))
             if direction == 1:
-                if o <= stop:
-                    exit_price, reason = o, "gap_stop"
+                if o <= active_stop:
+                    exit_price, reason = o, "gap_stop" if not be_active else "break_even_gap"
                 elif o >= take:
                     exit_price, reason = take, "take_profit"
-                elif l <= stop:
-                    exit_price, reason = stop, "stop_loss"
+                elif l <= active_stop:
+                    exit_price, reason = active_stop, "break_even_stop" if be_active else "stop_loss"
                 elif h >= take:
                     exit_price, reason = take, "take_profit"
             else:
-                if o >= stop:
-                    exit_price, reason = o, "gap_stop"
+                if o >= active_stop:
+                    exit_price, reason = o, "gap_stop" if not be_active else "break_even_gap"
                 elif o <= take:
                     exit_price, reason = take, "take_profit"
-                elif h >= stop:
-                    exit_price, reason = stop, "stop_loss"
+                elif h >= active_stop:
+                    exit_price, reason = active_stop, "break_even_stop" if be_active else "stop_loss"
                 elif l <= take:
                     exit_price, reason = take, "take_profit"
+            if not reason and not be_armed and be_trigger_price is not None:
+                if (direction == 1 and h >= be_trigger_price) or (direction == -1 and l <= be_trigger_price):
+                    be_armed = True
             if reason:
                 exit_index = j
                 break
@@ -156,6 +172,9 @@ def simulate(candles, signals, *, initial_equity=10_000.0, risk_pct=1.0,
             "entry_ts": times[fill_index], "exit_ts": times[exit_index],
             "entry_price": round(entry_ex, 10), "exit_price": round(exit_ex, 10),
             "stop_price": stop, "take_price": take,
+            "be_activated": be_active,
+            "be_activated_ts": be_activated_ts,
+            "be_trigger_price": round(be_trigger_price,10) if be_trigger_price is not None else None,
             "planned_rr": round(planned_rr, 4),
             "quantity": round(units, 8), "pnl": round(net, 6),
             "r_multiple": round(net / allocated_risk, 6),
@@ -171,9 +190,11 @@ def simulate(candles, signals, *, initial_equity=10_000.0, risk_pct=1.0,
         "settings": {"initial_equity": initial_equity, "risk_pct": risk_pct,
                      "fee_bps_per_side": fee_bps, "slippage_bps_per_side": slippage_bps,
                      "max_exposure": max_exposure, "min_rr": min_rr,
-                     "max_hold_bars": max_hold_bars},
+                     "max_hold_bars": max_hold_bars,
+                     "move_stop_to_be_at_r": move_stop_to_be_at_r},
         "summary": {
             "signals_received": len(signals), "closed_trades": len(trades),
+            "break_even_stop_exits": sum(t["exit_reason"] in ("break_even_stop","break_even_gap") for t in trades),
             "skipped": skipped, "win_rate_pct": round(100*len(wins)/len(trades),2) if trades else None,
             "profit_factor": round(gross_profit/gross_loss,3) if gross_loss else None,
             "profit_factor_unbounded": bool(trades and not gross_loss),
@@ -186,6 +207,8 @@ def simulate(candles, signals, *, initial_equity=10_000.0, risk_pct=1.0,
         "warnings": [
             "No funding costs, liquidations, order-book depth, partial fills or taxes.",
             "Within-bar ambiguity is resolved stop-first; gaps can exceed targeted risk.",
+            "BE activates no earlier than the bar AFTER +1R is observed; OHLC cannot resolve same-bar ordering.",
+            "BE means gross entry price; fees and slippage can make a BE stop net negative.",
             "Max drawdown is measured on closed-trade equity, not intratrade mark-to-market.",
             "This engine does NOT identify RFM setups or demonstrate an edge."
         ],
