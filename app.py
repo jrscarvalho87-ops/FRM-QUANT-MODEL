@@ -36,6 +36,12 @@ async def okx_get(path: str, params: dict):
 async def home():
     return FileResponse(Path(__file__).resolve().parent / "static" / "index.html")
 
+@app.get("/poc")
+async def poc_lab():
+    """Dedicated Fibonacci and dynamic POC research interface."""
+    return FileResponse(Path(__file__).resolve().parent / "static" / "poc.html")
+
+
 @app.get("/health")
 async def health():
     return {"status":"ok","timestamp_utc":datetime.now(timezone.utc).isoformat()}
