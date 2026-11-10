@@ -99,6 +99,9 @@ def generate_impulse_candidates(candles, *, pivot_span=3, expiry_bars=8,
         in_swing=[z for z in liquidity["zones"]
                   if fib["entry_zone_low"]>=0 and
                   min(hundred,zero)<=z["price"]<=max(hundred,zero)]
+        unbreached_in_swing=[
+            z for z in in_swing if not z["breached_after_confirmation"]
+        ]
         # Break-of-structure is a *separate, optional* heuristic feature:
         # did a candle close beyond the previously confirmed opposite high/low?
         same_side_pivots=high_pivots if is_high else low_pivots
@@ -137,6 +140,8 @@ def generate_impulse_candidates(candles, *, pivot_span=3, expiry_bars=8,
             "fvg_count":len(fvg),
             "liquidity_zone_count":liquidity["zone_count"],
             "liquidity_structure_zone_count":len(in_swing),
+            "liquidity_unbreached_zone_count":liquidity["unbreached_zone_count"],
+            "liquidity_unbreached_in_structure_count":len(unbreached_in_swing),
             "liquidity_bsl_count":liquidity["bsl_count"],
             "liquidity_ssl_count":liquidity["ssl_count"],
             "liquidity_eqh_pairs":liquidity["eqh_pairs"],
