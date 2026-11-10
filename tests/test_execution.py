@@ -15,7 +15,7 @@ def signal(i=0, side="long", entry=100, stop=95, take=110, ttl=3):
 
 class ExecutionTests(unittest.TestCase):
     def test_signal_cannot_fill_in_its_own_candle(self):
-        result = simulate([bar(0,l=90),bar(1,l=101,h=103)], [signal()])
+        result = simulate([bar(0,l=90),bar(1,o=102,h=103,l=101,c=102)], [signal()])
         self.assertEqual(result["summary"]["closed_trades"],0)
         self.assertEqual(result["summary"]["skipped"]["entry_not_filled"],1)
 
