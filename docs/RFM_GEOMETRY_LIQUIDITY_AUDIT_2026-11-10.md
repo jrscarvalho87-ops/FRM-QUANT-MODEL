@@ -43,6 +43,25 @@ O novo módulo **swing_liquidity_context.py** separa níveis previamente conheci
 - Reexecuta custos, stops, TP e a regra confirmada BE aos +1R; compara separadamente a variante sem BE apenas como controlo.
 - Os dados anteriores já foram examinados, portanto um resultado melhor nesta janela **não seria validação independente fora da amostra**.
 
+
+## Reexecução verificada sobre as mesmas 30 000 velas
+O processo de auditoria concluiu com assinaturas SHA-256 idênticas às do snapshot anterior, pelo que os preços e volumes comparados são os mesmos.
+
+| Mercado | Sinais antigos | Novos sinais com âncoras geométricas válidas | Trades concluídos com BE | Retorno simulado anterior | Retorno após correção |
+|---|---:|---:|---:|---:|---:|
+| BTC | 310 | 291 | 75 | -10,4401% | -9,9347% |
+| ETH | 334 | 301 | 79 | -6,0838% | -6,4282% |
+| SOL | 333 | 301 | 82 | -11,1068% | -9,3069% |
+
+Os novos sinais correspondem exatamente à eliminação dos 84 candidatos anteriormente identificados como inconsistentes. Continuam a existir perdas líquidas nos três mercados. **São resultados de uma hipótese mecânica, não uma validação do edge da RFM real.** As saídas BE e a exposição nocional usam os pressupostos já documentados.
+
+## Problema quantitativo adicional: liquidez que aparece sempre
+A primeira métrica de liquidez contextual positiva dava **893/893 setups (100%)**. Ao inspecionar a distribuição, o número mínimo de níveis considerados era sempre **dois**: as próprias âncoras alta/baixa da Fibonacci, que eram automaticamente identificadas como pivôs de estrutura.
+
+Isso não constitui uma confluência adicional; é um artefacto da definição. **Foi por isso introduzida uma contagem separada de liquidez estrutural independente das duas velas-âncora**, baseada em níveis conhecidos e ainda não ultrapassados. A contagem antiga é mantida apenas para diagnóstico de comparabilidade, não para decisões de entrada.
+
+A nova métrica continua a ser uma hipótese explicativa — **não** foi convertida num filtro com limiar ou distância obrigatória à Gold Zone/TP. A sua distribuição e utilidade precisam de validação com setups anotados e novas janelas fora da amostra.
+
 ## Testes e bloqueios restantes
 Testes de longa/curta, consistência de máximos e mínimos, rejeição de futuros, períodos completos, dados com falhas, sincronização de candles e gestão BE estão no [GitHub Actions](https://github.com/jrscarvalho87-ops/FRM-QUANT-MODEL/actions).
 
