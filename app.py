@@ -6,8 +6,9 @@ import httpx
 from fastapi import FastAPI, HTTPException, Query
 from fastapi.responses import FileResponse
 from pathlib import Path
+from data_quality import normalize_candles, gap_report
 
-app = FastAPI(title="RFM Quant", version="0.3.0")
+app = FastAPI(title="RFM Quant", version="0.4.0")
 OKX_BASE = "https://www.okx.com"
 WATCHLIST = ["BTC","ETH","SOL","BNB","ZEC","HYPE","XRP","ENA","TAO","NEAR","RENDER","ONDO","PUMP","INJ","AVAX","ADA","PEPE","SUI","LINK","SEI","DOGE","BCH","LTC","TRX","WLD","AAVE","UNI","XLM","ARB","OP"]
 BARS = {"1m","3m","5m","15m","30m","1H","2H","4H","6H","12H","1D","1Dutc"}
@@ -58,15 +59,12 @@ async def candles(
     if after is not None:
         params["after"] = str(after)
     data = await okx_get("/api/v5/market/history-candles",params)
-    rows = []
-    for c in data:
-        if len(c) < 9:
-            continue
-        rows.append({"ts":int(c[0]),"open":c[1],"high":c[2],"low":c[3],
-                     "close":c[4],"volume_contracts":c[5],"volume_base":c[6],
-                     "volume_quote":c[7],"confirmed":c[8] == "1"})
-    rows.sort(key=lambda r:r["ts"])
+    rows, rejected = normalize_candles(data)
+    interval_ms = {"1m":60000,"3m":180000,"5m":300000,"15m":900000,
+                   "30m":1800000,"1H":3600000,"2H":7200000,"4H":14400000,
+                   "6H":21600000,"12H":43200000,"1D":86400000,"1Dutc":86400000}[bar]
     return {"instrument":inst_id,"bar":bar,"count":len(rows),"candles":rows,
             "oldest_ts":rows[0]["ts"] if rows else None,
             "newest_ts":rows[-1]["ts"] if rows else None,
-            "note":"Raw market data, not backtest results. Exclude unconfirmed candles from signals."}
+            "rejected":rejected,"missing_intervals":gap_report(rows,interval_ms),
+            "note":"Validated confirmed candles only. No interpolation; gap counts are within this page only. No backtest results."}
