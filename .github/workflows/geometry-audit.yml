@@ -10,6 +10,9 @@ on:
       - swing_liquidity_context.py
       - structural_liquidity.py
   workflow_dispatch:
+concurrency:
+  group: rfm-geometry-${{ github.ref }}
+  cancel-in-progress: true
 permissions:
   contents: read
 jobs:
