@@ -187,6 +187,9 @@ def run_pinned_audit(base_url,output_dir):
         ],"instruments":[]}
     with httpx.Client(timeout=120,follow_redirects=True) as client:
         for instrument in INSTRUMENTS:
+            print(json.dumps({"instrument":instrument,
+                              "phase":"fetch_frozen_historical_candles",
+                              "expected_last_ts":PINNED_LAST_TS}),flush=True)
             candles,metadata=fetch_candles(
                 client,base_url,instrument,"15m",PINNED_BARS,
                 last_bar_ts=PINNED_LAST_TS)
