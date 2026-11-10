@@ -12,6 +12,8 @@ from fvg_state import active_fvgs_overlapping_zone
 from structural_liquidity import structural_liquidity
 from volume_profile import approximate_poc
 from htf_context import four_hour_context
+from swing_geometry import audit_swing_geometry
+from swing_liquidity_context import summarize_liquidity_for_swing
 
 
 def generate_impulse_candidates(candles, *, pivot_span=3, expiry_bars=8,
@@ -44,7 +46,8 @@ def generate_impulse_candidates(candles, *, pivot_span=3, expiry_bars=8,
     signals=[]
     events=[]
     rejected={"no_prior_opposite_pivot":0,"swing_too_small":0,
-              "gold_zone_already_touched":0,"no_active_gold_fvg":0}
+              "gold_zone_already_touched":0,"no_active_gold_fvg":0,
+              "invalid_fibonacci_anchor_extrema":0}
     for i in range(2*pivot_span,len(bars)):
         p=i-pivot_span
         other=[k for k in range(p-pivot_span,p+pivot_span+1) if k!=p]
@@ -69,6 +72,12 @@ def generate_impulse_candidates(candles, *, pivot_span=3, expiry_bars=8,
             continue
         hundred=opposite["price"]
         zero=highs[p] if side=="long" else lows[p]
+        geometry=audit_swing_geometry(
+            bars,hundred_index=opposite["index"],zero_index=p,
+            asof_index=i,side=side)
+        if not geometry["anchors_valid"]:
+            rejected["invalid_fibonacci_anchor_extrema"]+=1
+            continue
         if side=="long" and zero<=hundred or side=="short" and zero>=hundred:
             rejected["swing_too_small"]+=1
             continue
@@ -96,12 +105,13 @@ def generate_impulse_candidates(candles, *, pivot_span=3, expiry_bars=8,
             bars,i,pivot_span=pivot_span,interval_ms=interval_ms)
         # Location measured across the structural swing, not necessarily
         # close to Gold Zone or TP. No user-approved threshold is imposed.
-        in_swing=[z for z in liquidity["zones"]
-                  if fib["entry_zone_low"]>=0 and
-                  min(hundred,zero)<=z["price"]<=max(hundred,zero)]
-        unbreached_in_swing=[
-            z for z in in_swing if not z["breached_after_confirmation"]
-        ]
+        swing_liquidity=summarize_liquidity_for_swing(
+            liquidity["zones"],hundred_price=hundred,zero_price=zero,
+            hundred_anchor_ts=opposite["ts"],zero_anchor_ts=times[p],
+            signal_ts=times[i],interval_ms=interval_ms)
+        # These are descriptive features only, never approval thresholds.
+        in_swing_count=swing_liquidity["in_swing_price_range_count"]
+        unbreached_count=swing_liquidity["unbreached_in_swing_count"]
         # Break-of-structure is a *separate, optional* heuristic feature:
         # did a candle close beyond the previously confirmed opposite high/low?
         same_side_pivots=high_pivots if is_high else low_pivots
@@ -137,11 +147,19 @@ def generate_impulse_candidates(candles, *, pivot_span=3, expiry_bars=8,
             "anchor_0_ts":times[p],
             "zero_price":zero,"hundred_price":hundred,
             "entry_level":entry_level,"fvg_overlaps_gold_zone":True,
+            "swing_duration_bars":geometry["swing_duration_bars"],
+            "swing_confirmation_lag_bars":geometry["confirmation_lag_bars"],
+            "swing_anchor_extrema_valid":geometry["anchors_valid"],
             "fvg_count":len(fvg),
             "liquidity_zone_count":liquidity["zone_count"],
-            "liquidity_structure_zone_count":len(in_swing),
+            "liquidity_structure_zone_count":in_swing_count,
             "liquidity_unbreached_zone_count":liquidity["unbreached_zone_count"],
-            "liquidity_unbreached_in_structure_count":len(unbreached_in_swing),
+            "liquidity_unbreached_in_structure_count":unbreached_count,
+            "liquidity_formed_during_swing_count":swing_liquidity["formed_during_swing_count"],
+            "liquidity_known_before_swing_count":swing_liquidity["known_before_swing_count"],
+            "liquidity_unbreached_contextual_count":swing_liquidity["unbreached_contextual_count"],
+            "liquidity_structural_distinct_types":swing_liquidity["in_swing_distinct_types"],
+            "liquidity_unbreached_contextual_types":swing_liquidity["unbreached_contextual_distinct_types"],
             "liquidity_bsl_count":liquidity["bsl_count"],
             "liquidity_ssl_count":liquidity["ssl_count"],
             "liquidity_eqh_pairs":liquidity["eqh_pairs"],
@@ -169,6 +187,7 @@ def generate_impulse_candidates(candles, *, pivot_span=3, expiry_bars=8,
             "events":events[-max_signals:],"rejected":rejected,
             "warnings":[
                 "Pivot-pair anchors are mechanical assumptions, not the user's validated RFM.",
+                "Candidate anchors are now geometrically checked against ALL extremes within the selected historical swing.",
                 "FVG in Gold Zone is required; liquidity is measured but relevance threshold is not approved.",
                 "A close past an earlier confirmed pivot is an optional BOS-like feature, not a BOS filter.",
                 "4H premium/discount uses a provisional rolling range of completed 4H candles; informational only.",
