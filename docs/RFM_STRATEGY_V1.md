@@ -74,3 +74,15 @@ O utilizador confirmou que o critério é a presença de **zonas relevantes de l
 
 ## Gestão da posição — regra confirmada (2026-11-10)
 Quando a operação atinge **+1R de movimento favorável**, medido desde o preço de entrada até ao stop inicial, o **stop-loss é movido para break-even (preço de entrada)**. A posição mantém o take-profit original, a menos que outra regra venha a ser confirmada. Se o preço regressar à entrada depois da ativação, a saída é BE **bruto**; o resultado líquido pode ser ligeiramente negativo por taxas e slippage. Em backtests OHLCV, a ordem intravela entre atingir +1R e regressar ao stop é desconhecida; usar política conservadora e reportar essa limitação, sem fabricar sequência intravela.
+
+## Revisão humana cega — quatro exemplos (2026-11-11)
+O utilizador confirmou **a ordem de desenho**: em **uptrend, traçar a ferramenta do high para o low**; em **downtrend, do low para o high**. **Usar sempre o extremo real do pavio**, não o corpo da vela, e escolher um **low/high estruturalmente válido**, não um pivô automático qualquer. Esta ordem de interação com a ferramenta não deve ser confundida com os nomes dos níveis 0% e 100% no modelo; confirmar a configuração visual da ferramenta antes de alterar o cálculo dos preços.
+
+CSV humano: 4 de 36 casos preenchidos; **Fib correta em 1/4**, FVG correta em 3/4 (1 incerto), setup aceite em 1/4 (2 não e 1 incerto). É um diagnóstico pequeno e estratificado, não uma taxa populacional.
+
+- SOL-1793341800000 (long): fib rejeitada; utilizador pede extremo no low; FVG correta; price action fraca; setup incerto.
+- BTC-1792152000000 (long): fib rejeitada; extremo do **pavio inferior** obrigatório; volume e price action maus; liquidez rejeitada; setup rejeitado.
+- SOL-1787621400000 (long): fib 100% tem de corresponder a **low válido**; preço vinha de expansão brusca; RFM procura ranges/estrutura, não expansão; setup rejeitado.
+- SOL-1785748500000 (short): fib, FVG e liquidez aprovadas; setup aceite **com reservas sobre estrutura**; o utilizador procura estrutura de mercado mais concreta.
+
+**Ação de investigação:** separar geometricamente válido de *swing aprovado por leitura estrutural*; acrescentar descritores de regime (range versus expansão), qualidade da price action e volume como informação **a validar**, não impor já limiares nem regras inventadas. **Não** apresentar os resultados antigos como validação da RFM. Os quatro exemplos devem ficar reservados para regressão de qualidade de sinais, sem usar PnL futuro.
