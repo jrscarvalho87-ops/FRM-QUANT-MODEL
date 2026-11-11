@@ -14,6 +14,7 @@ from volume_profile import approximate_poc
 from htf_context import four_hour_context
 from swing_geometry import audit_swing_geometry
 from swing_liquidity_context import summarize_liquidity_for_swing
+from market_structure_context import describe_structure_context
 
 
 def generate_impulse_candidates(candles, *, pivot_span=3, expiry_bars=8,
@@ -125,6 +126,9 @@ def generate_impulse_candidates(candles, *, pivot_span=3, expiry_bars=8,
             else:
                 prior_break=any(c<preceding["price"]
                                 for c in closes[opposite["index"]+1:i+1])
+        structure_context=describe_structure_context(
+            bars,hundred_index=opposite["index"],zero_index=p,
+            asof_index=i,pivot_span=pivot_span)
         htf=four_hour_context(bars,i,interval_ms=interval_ms)
         poc_price=None
         poc_in_zone=None
@@ -150,6 +154,19 @@ def generate_impulse_candidates(candles, *, pivot_span=3, expiry_bars=8,
             "swing_duration_bars":geometry["swing_duration_bars"],
             "swing_confirmation_lag_bars":geometry["confirmation_lag_bars"],
             "swing_anchor_extrema_valid":geometry["anchors_valid"],
+            "fib_drawing_start": "high" if side=="long" else "low",
+            "fib_drawing_end": "low" if side=="long" else "high",
+            "pre_context_bars":structure_context["pre_context_bars"],
+            "pre_close_efficiency":structure_context["pre_close_efficiency"],
+            "pre_range_to_atr":structure_context["pre_range_to_atr"],
+            "swing_close_efficiency":structure_context["swing_close_efficiency"],
+            "swing_largest_bar_share":structure_context["swing_largest_bar_share"],
+            "swing_peak_tr_to_pre_atr":structure_context["swing_peak_tr_to_pre_atr"],
+            "swing_mean_tr_to_pre_atr":structure_context["swing_mean_tr_to_pre_atr"],
+            "interior_confirmed_pivots":structure_context["interior_confirmed_pivots"],
+            "interior_alternating_pivot_pairs":structure_context["interior_alternating_pivot_pairs"],
+            "swing_vs_prior_volume_ratio":structure_context["swing_vs_prior_volume_ratio"],
+            "signal_vs_previous_20_volume_ratio":structure_context["signal_vs_previous_20_volume_ratio"],
             "fvg_count":len(fvg),
             "liquidity_zone_count":liquidity["zone_count"],
             "liquidity_structure_zone_count":in_swing_count,
@@ -195,6 +212,8 @@ def generate_impulse_candidates(candles, *, pivot_span=3, expiry_bars=8,
             "warnings":[
                 "Pivot-pair anchors are mechanical assumptions, not the user's validated RFM.",
                 "Candidate anchors are now geometrically checked against ALL extremes within the selected historical swing.",
+                "User draws UP from high to low and DOWN from low to high; this click order is distinct from chronological impulse formation.",
+                "Range/expansion, confirmed turns and volume are exploratory descriptors, never automatic entry gates.",
                 "FVG in Gold Zone is required; liquidity is measured but relevance threshold is not approved.",
                 "A close past an earlier confirmed pivot is an optional BOS-like feature, not a BOS filter.",
                 "4H premium/discount uses a provisional rolling range of completed 4H candles; informational only.",
