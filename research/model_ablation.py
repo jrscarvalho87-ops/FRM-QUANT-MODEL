@@ -160,6 +160,7 @@ def ablate_models(dataset, *, min_train=80, test_times=25, n_splits=4,
     }
     return {
         "status":"exploratory_evaluated",
+        "protocol":"predeclared_price_vs_structure_vs_liquidity_v1",
         "trades":len(d),"unique_signal_times":len(unique_times),
         "completed_folds":len(good),"folds":folds,
         "feature_sets":{k:list(v) for k,v in FEATURE_GROUPS.items()},
