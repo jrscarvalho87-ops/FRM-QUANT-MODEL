@@ -19,6 +19,14 @@ def levels(zero_price: float, hundred_price: float, side: str):
         raise ValueError("short requires 0% below 100%")
     return {
         "side": side, "zero": zero, "hundred": hundred,
+        # Explicit user drawing interaction: click high -> low in uptrend,
+        # low -> high in downtrend, on wick extremes. This is a user-facing
+        # draw direction, not a claim that the high came first in time.
+        "drawing_start_extreme": "high" if side=="long" else "low",
+        "drawing_end_extreme": "low" if side=="long" else "high",
+        "drawing_start_price": zero,
+        "drawing_end_price": hundred,
+        "anchor_source": "high_low_wicks_not_candle_bodies",
         "level_67": zero + .67 * (hundred - zero),
         "level_75": zero + .75 * (hundred - zero),
         "entry_zone_low": min(zero + .67*(hundred-zero),zero + .75*(hundred-zero)),
