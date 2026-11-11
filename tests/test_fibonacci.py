@@ -15,6 +15,19 @@ class FibonacciTests(unittest.TestCase):
         self.assertAlmostEqual(r["level_75"],83401.9,places=1)
         self.assertAlmostEqual(r["rr_at_67"],67/33)
 
+    def test_user_drawing_order_uses_wick_extremes_not_chronological_order(self):
+        up=levels(120,100,"long")
+        self.assertEqual(up["drawing_start_extreme"],"high")
+        self.assertEqual(up["drawing_end_extreme"],"low")
+        self.assertEqual(up["drawing_start_price"],120)
+        self.assertEqual(up["drawing_end_price"],100)
+        down=levels(100,120,"short")
+        self.assertEqual(down["drawing_start_extreme"],"low")
+        self.assertEqual(down["drawing_end_extreme"],"high")
+        self.assertEqual(down["drawing_start_price"],100)
+        self.assertEqual(down["drawing_end_price"],120)
+        self.assertEqual(up["anchor_source"],"high_low_wicks_not_candle_bodies")
+
     def test_wrong_direction_rejected(self):
         with self.assertRaises(ValueError):
             levels(100,90,"short")
