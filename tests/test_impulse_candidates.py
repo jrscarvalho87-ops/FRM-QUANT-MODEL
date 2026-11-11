@@ -32,6 +32,12 @@ class ImpulseCandidateTests(unittest.TestCase):
         self.assertEqual(e["zero_price"],120)
         self.assertEqual(result["settings"]["bos_required"],False)
         self.assertLess(e["anchor_0_ts"],e["signal_ts"])
+        self.assertEqual(e["fib_drawing_start"],"high")
+        self.assertEqual(e["fib_drawing_end"],"low")
+        self.assertGreater(e["swing_largest_bar_share"],0)
+        self.assertGreaterEqual(e["interior_confirmed_pivots"],0)
+        self.assertIn("pre_range_to_atr",e)
+        self.assertIn("signal_vs_previous_20_volume_ratio",e)
 
     def test_short_mirror_without_bos(self):
         b=sample()
@@ -44,6 +50,8 @@ class ImpulseCandidateTests(unittest.TestCase):
         e=next(x for x in result["events"] if x["side"]=="short")
         self.assertFalse(e["structure_break_close_context"])
         self.assertTrue(e["fvg_overlaps_gold_zone"])
+        self.assertEqual(e["fib_drawing_start"],"low")
+        self.assertEqual(e["fib_drawing_end"],"high")
 
     def test_causality_future_modifications_not_in_past(self):
         b=sample()
