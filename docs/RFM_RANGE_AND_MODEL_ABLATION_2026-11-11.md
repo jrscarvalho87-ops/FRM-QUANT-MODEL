@@ -29,6 +29,27 @@ A tabela mede máximo **high-low / ATR prévio** e não necessariamente o **true
 - **research/compare_models_frozen.py**: agrupa BTC, ETH e SOL do mesmo histórico corrigido e executa o protocolo de ablação. Brier Score/log-loss medem previsões de resultado positivo nos trades simulados já fechados, NÃO retorno de carteira. O CSV com as quatro avaliações humanas NÃO entra no treino nem no alvo.
 - **GitHub CI**: testes unitários, checks de no-lookahead, geometria e regressão long/short, splitting temporal, validação de dados, e replay histórico com histórico OHLCV fixo e checksum.
 
+
+
+## Resultado efetivo da experiência quantitativa congelada
+
+Reexecutado o snapshot público da OKX com **30.000 velas confirmadas 15m** e checksum histórico igual ao anterior. Foram produzidos **893 candidatos com Fib geometricamente válida**, dos quais **236 trades simulados fechados com a regra BE aos +1R** (75 BTC, 79 ETH, 82 SOL). Estes dados continuam a ser um **proxy experimental, não a RFM validada**.
+
+A comparação reuniu esses 236 trades em **4 folds temporais de 25 timestamps de sinal cada**, iguais para todos os modelos, com embargo de 15 minutos e exclusão de operações de treino cujo fecho não fosse conhecido à data de teste. Os grupos de features são predefinidos no código, não foram otimizados em função das quatro correções humanas.
+
+| Conjunto de features | Brier: XGBoost | Brier: regressão logística |
+|---|---:|---:|
+| Apenas preço | 0,165587 | 0,161453 |
+| Preço + estrutura/range/volume | 0,159294 | 0,167288 |
+| Preço + estrutura + liquidez | 0,160386 | 0,178067 |
+| **Baseline constante (sem features)** | **0,149548** | **0,149548** |
+
+A baseline também teve a melhor **log-loss: 0,478173**; a melhor combinação com XGBoost (estrutura) teve log-loss 0,526210. **Nenhum modelo supera a baseline constante**. O XGBoost com estrutura melhorou sobre o XGBoost só com preço, mas não prova edge.
+
+Estes números referem-se a **classificação probabilística de R positivo**, não à rentabilidade de uma carteira; o treino está condicionado aos trades simulados executados/fechados, com viés de seleção e ativos correlacionados. A amostra histórica já foi examinada; não existe holdout final intocado. Não usar estes modelos para dar sinais reais nem alterar a estratégia para maximizar estes scores retrospectivos.
+
+Reprodução e CSV completos: [GitHub Action 42932357777](https://github.com/jrscarvalho87-ops/FRM-QUANT-MODEL/actions/runs/42932357777), artefacto com ficheiro model_ablation.json e todos os eventos/trades.
+
 ## Limitações / próxima validação
 
 O gerador continua a ser proxy mecânico de pivôs; não reproduz a seleção humana do low/high válido. Os sinais BTC/ETH/SOL podem estar correlacionados; a simulação por ativo não é uma carteira agregada. A janela histórica de 30 mil velas já foi vista, logo folds nela são APENAS diagnóstico retrospectivo, sem holdout final independente. A decisão humana de que é bom range precisa de ser traduzida em critérios claros a partir de novos exemplos cujo resultado futuro esteja oculto, antes de usar novos dados futuros para validar edge. Funding, slippage real, liquidez de livro, impacto e caminho intravela de BE ainda são limitações.
